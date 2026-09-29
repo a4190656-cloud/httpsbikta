@@ -177,7 +177,7 @@ function StepPurpose({ value, onChange, onNext }: { value: PurposeId | null; onC
 function dayStart(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
 
 function StepTime(props: {
-  date?: Date; setDate: (d?: Date) => void; hours: number; setHours: (h: number) => void;
+  date: Date | undefined; setDate: (d?: Date) => void; hours: number; setHours: (h: number) => void;
   startIso: string | null; setStartIso: (s: string | null) => void; onBack: () => void; onNext: () => void;
 }) {
   const { date, hours, startIso } = props;

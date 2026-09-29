@@ -108,9 +108,9 @@ function Admin() {
           <Input type="time" value={blk.to} onChange={(e) => setBlk({ ...blk, to: e.target.value })} />
           <Input value={blk.reason} maxLength={100} onChange={(e) => setBlk({ ...blk, reason: e.target.value })} />
           <Button onClick={async () => {
-            if (!blk.date) return toast.error("בחרו תאריך");
+            if (!blk.date) { toast.error("בחרו תאריך"); return; }
             const s = new Date(`${blk.date}T${blk.from}`); const e = new Date(`${blk.date}T${blk.to}`);
-            if (e <= s) return toast.error("שעת הסיום חייבת להיות אחרי ההתחלה");
+            if (e <= s) { toast.error("שעת הסיום חייבת להיות אחרי ההתחלה"); return; }
             await addBlock({ data: { startsAt: s.toISOString(), endsAt: e.toISOString(), reason: blk.reason } });
             toast.success("המועד נחסם"); qc.invalidateQueries({ queryKey: ["admin"] });
           }}><Lock className="h-4 w-4" /> חסימה</Button>

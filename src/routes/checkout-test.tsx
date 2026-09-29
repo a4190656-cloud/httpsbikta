@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/checkout-test")({
   head: () => ({ meta: [{ title: "תשלום (מצב בדיקה) — בקתה B" }, { name: "robots", content: "noindex" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({ amount: Number(s.amount) || 0 }),
+  validateSearch: (s: Record<string, unknown>) => ({ amount: Number(s["amount"]) || 0 }),
   component: TestCheckout,
 });
 
