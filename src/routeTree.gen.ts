@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutTestRouteImport } from './routes/checkout-test'
+import { Route as ManageTokenRouteImport } from './routes/manage.$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const CheckoutTestRoute = CheckoutTestRouteImport.update({
   path: '/checkout-test',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManageTokenRoute = ManageTokenRouteImport.update({
+  id: '/manage/$token',
+  path: '/manage/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/checkout-test': typeof CheckoutTestRoute
+  '/manage/$token': typeof ManageTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/checkout-test': typeof CheckoutTestRoute
+  '/manage/$token': typeof ManageTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/checkout-test': typeof CheckoutTestRoute
+  '/manage/$token': typeof ManageTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/checkout-test'
+  fullPaths: '/' | '/checkout-test' | '/manage/$token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/checkout-test'
-  id: '__root__' | '/' | '/checkout-test'
+  to: '/' | '/checkout-test' | '/manage/$token'
+  id: '__root__' | '/' | '/checkout-test' | '/manage/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CheckoutTestRoute: typeof CheckoutTestRoute
+  ManageTokenRoute: typeof ManageTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutTestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manage/$token': {
+      id: '/manage/$token'
+      path: '/manage/$token'
+      fullPath: '/manage/$token'
+      preLoaderRoute: typeof ManageTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CheckoutTestRoute: CheckoutTestRoute,
+  ManageTokenRoute: ManageTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

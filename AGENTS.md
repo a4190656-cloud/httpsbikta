@@ -8,3 +8,11 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+# Project rules
+
+- Booking writes go through server functions in src/lib/bookings.functions.ts using the admin client; tables have no public policies — keeps customer data private.
+- Customers manage bookings via an unguessable manage_token link, no login — fast checkout.
+- Google Calendar is accessed only from src/lib/gcal.server.ts via the connector gateway — single integration point.
+- Payment is TEST MODE: /checkout-test posts `{source:"takbull", type}` to the parent; swap for the real Takbull iframe + verified server callback when credentials exist.
+- First signed-in user auto-becomes admin (bootstrap in getAdminStatus) — owner setup without manual SQL.
