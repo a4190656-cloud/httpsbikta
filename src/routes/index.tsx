@@ -12,6 +12,7 @@ import {
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { he } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -206,7 +207,7 @@ function StepTime(props: {
       <h2 className="font-display text-2xl font-bold">מתי תרצו להגיע?</h2>
       <div className="mt-6 grid gap-6 md:grid-cols-[auto_1fr]">
         <div className="rounded-2xl border border-border bg-card p-2">
-          <Calendar mode="single" selected={date} onSelect={props.setDate} disabled={(d) => d < dayStart(new Date())} className="p-3 pointer-events-auto" />
+          <Calendar locale={he} dir="rtl" mode="single" selected={date} onSelect={props.setDate} disabled={(d) => d < dayStart(new Date())} className="p-3 pointer-events-auto" />
         </div>
         <div>
           <Label className="text-sm">משך ההשכרה</Label>
