@@ -245,7 +245,7 @@ function StepTime(props: {
   }, [from?.getTime(), data]);
 
   const click = (idx: number) => {
-    const s = slots[idx];
+    const s = slots[idx]!;
     if (!anchor) { setAnchor(s.iso); props.setRange({ start: s.iso, end: s.end }); return; }
     const a = slots.findIndex((x) => x.iso === anchor);
     const [lo, hi] = a <= idx ? [a, idx] : [idx, a];
@@ -253,7 +253,7 @@ function StepTime(props: {
       toast("יש בטווח הזה שעות תפוסות — בחרו טווח רציף פנוי");
       setAnchor(s.iso); props.setRange({ start: s.iso, end: s.end }); return;
     }
-    props.setRange({ start: slots[lo].iso, end: slots[hi].end });
+    props.setRange({ start: slots[lo]!.iso, end: slots[hi]!.end });
     setAnchor(null);
   };
   const inRange = (iso: string) => range && iso >= range.start && iso < range.end;
