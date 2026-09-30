@@ -91,9 +91,28 @@ export function formatDateTime(iso: string) {
 export function formatTime(iso: string) {
   return new Intl.DateTimeFormat("he-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 }
-/** Hebrew calendar date, e.g. "י״ד בתשרי תשפ״ז". */
+/** Hebrew calendar date, e.g. "א׳ בחשוון תשפ״ז". */
 export function hebrewDate(iso: string | Date) {
-  return new Intl.DateTimeFormat("he-u-ca-hebrew", {
+  const parts = new Intl.DateTimeFormat("he-u-ca-hebrew", {
     timeZone: "Asia/Jerusalem", day: "numeric", month: "long", year: "numeric",
-  }).format(new Date(iso));
+  }).formatToParts(new Date(iso));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const day = parseInt(get("day"), 10);
+  const year = parseInt(get("year"), 10);
+  return `${hebrewNumeral(day)} ב${get("month")} ${hebrewNumeral(year)}`;
+}
+
+/** 1→א׳, 15→ט״ו, 5787→תשפ״ז */
+function hebrewNumeral(n: number): string {
+  if (n >= 1000) n = n % 1000;
+  const hundreds = ["", "ק", "ר", "ש", "ת", "תק", "תר", "תש", "תתק", "תתר"];
+  const tens = ["", "י", "כ", "ל", "מ", "נ", "ס", "ע", "פ", "צ"];
+  const ones = ["", "א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט"];
+  let s = hundreds[Math.floor(n / 100)] ?? "";
+  const rest = n % 100;
+  if (rest === 15) s += "טו";
+  else if (rest === 16) s += "טז";
+  else s += tens[Math.floor(rest / 10)] + ones[rest % 10];
+  if (s.length === 1) return s + "׳";
+  return s.slice(0, -1) + "״" + s.slice(-1);
 }
