@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import {
-  Home, ArrowLeft, ArrowRight,
+  Trees, Home, ArrowLeft, ArrowRight,
   Check, ShieldCheck, Clock, Loader2, CalendarDays, X, Minus, Plus, CupSoda,
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
