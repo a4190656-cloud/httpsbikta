@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatILS, formatTime, purposeLabel } from "@/lib/booking-rules";
 import { adminAddBlock, adminList, adminRemoveBlock, getAdminStatus } from "@/lib/bookings.functions";
+import { ManualBookingDialog, RevenuePanel, SettingsPanel } from "@/components/AdminPanels";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "לוח ניהול — בקתה B" }, { name: "robots", content: "noindex" }] }),
@@ -57,8 +58,10 @@ function Admin() {
     <Wrap>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-3xl font-bold text-primary">לוח ניהול</h1>
-        <Button variant="ghost" onClick={() => supabase.auth.signOut().then(() => location.assign("/"))}><LogOut className="h-4 w-4" /> יציאה</Button>
+        <div className="flex gap-2"><ManualBookingDialog />
+        <Button variant="ghost" onClick={() => supabase.auth.signOut().then(() => location.assign("/"))}><LogOut className="h-4 w-4" /> יציאה</Button></div>
       </div>
+      <RevenuePanel />
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
         <div className="flex rounded-full bg-muted p-1">
@@ -116,6 +119,7 @@ function Admin() {
           }}><Lock className="h-4 w-4" /> חסימה</Button>
         </div>
       </div>
+      <SettingsPanel />
     </Wrap>
   );
 }
