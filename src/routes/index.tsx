@@ -41,7 +41,7 @@ const STEPS = ["מועד", "פרטים", "תשלום"];
 const spring = { type: "spring" as const, stiffness: 400, damping: 25 };
 const fade = { h: { opacity: 0, y: 14 }, s: { opacity: 1, y: 0 } };
 
-type Form = { fullName: string; phone: string; email: string; attendees: number; notes: string };
+type Form = { fullName: string; phone: string; attendees: number; notes: string };
 type Range = { start: string; end: string } | null;
 
 function useSettings(): Settings {
@@ -70,7 +70,7 @@ function BookingPage() {
   const [date, setDate] = useState<Date | undefined>(() => new Date());
   const [range, setRange] = useState<Range>(null);
   const [cart, setCart] = useState<DrinkCart>({});
-  const [form, setForm] = useState<Form>({ fullName: "", phone: "", email: "", attendees: 1, notes: "" });
+  const [form, setForm] = useState<Form>({ fullName: "", phone: "", attendees: 1, notes: "" });
   const [done, setDone] = useState<string | null>(null);
   const [drinksOnly, setDrinksOnly] = useState(false);
 
@@ -288,9 +288,8 @@ function StepDetails({ form, setForm, onBack, onNext }: { form: Form; setForm: (
   const errors = {
     fullName: form.fullName.trim().length < 2 ? "נא להזין שם מלא" : "",
     phone: !phoneRe.test(form.phone) ? "מספר טלפון ישראלי לא תקין" : "",
-    email: form.email && !/^\S+@\S+\.\S+$/.test(form.email) ? "כתובת אימייל לא תקינה" : "",
   };
-  const valid = !errors.fullName && !errors.phone && !errors.email && form.attendees >= 1;
+  const valid = !errors.fullName && !errors.phone && form.attendees >= 1;
   const set = (k: keyof Form, v: any) => setForm({ ...form, [k]: v });
   return (
     <div>
@@ -298,7 +297,6 @@ function StepDetails({ form, setForm, onBack, onNext }: { form: Form; setForm: (
       <motion.div className="mt-6 grid gap-4 sm:grid-cols-2" initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.05 } } }}>
         <motion.div variants={fade}><Field label="שם מלא" error={touched ? errors.fullName : ""}><Input value={form.fullName} maxLength={100} onChange={(e) => set("fullName", e.target.value)} /></Field></motion.div>
         <motion.div variants={fade}><Field label="טלפון" error={touched ? errors.phone : ""}><Input dir="ltr" inputMode="tel" placeholder="050-1234567" className="text-right" value={form.phone} onChange={(e) => set("phone", formatPhone(e.target.value))} /></Field></motion.div>
-        <motion.div variants={fade}><Field label="אימייל (לקבלת חשבונית מס)" error={touched ? errors.email : ""}><Input dir="ltr" type="email" placeholder="לא חובה" className="text-right" maxLength={255} value={form.email} onChange={(e) => set("email", e.target.value)} /></Field></motion.div>
         <motion.div variants={fade}><Field label="מספר משתתפים"><Input type="number" min={1} max={40} value={form.attendees} onChange={(e) => set("attendees", Math.max(1, Math.min(40, Number(e.target.value) || 1)))} /></Field></motion.div>
         <motion.div variants={fade} className="sm:col-span-2"><Field label="בקשות מיוחדות (לא חובה)"><Textarea rows={3} maxLength={1000} value={form.notes} onChange={(e) => set("notes", e.target.value)} /></Field></motion.div>
       </motion.div>
