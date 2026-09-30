@@ -29,8 +29,8 @@ export function ManualBookingDialog() {
   useEffect(() => { setAmount(String(suggested)); }, [suggested]);
 
   const submit = async () => {
-    if (!f.name.trim()) return toast.error("נא להזין שם");
-    if (f.withTime && (!f.date || hours <= 0)) return toast.error("בדקו תאריך ושעות");
+    if (!f.name.trim()) { toast.error("נא להזין שם"); return; }
+    if (f.withTime && (!f.date || hours <= 0)) { toast.error("בדקו תאריך ושעות"); return; }
     setSaving(true);
     try {
       await create({ data: {
