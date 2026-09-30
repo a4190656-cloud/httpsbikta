@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ImageIcon, MessageSquareQuote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getPublicReviews } from "@/lib/bookings.functions";
+import { getGalleryImages } from "@/lib/gallery.functions";
 import gallery01 from "@/assets/gallery/bikta-01.jpg.asset.json";
 import gallery02 from "@/assets/gallery/bikta-02.jpg.asset.json";
 import gallery03 from "@/assets/gallery/bikta-03.jpg.asset.json";
@@ -17,7 +18,7 @@ import gallery09 from "@/assets/gallery/bikta-09.jpg.asset.json";
 import gallery10 from "@/assets/gallery/bikta-10.jpg.asset.json";
 import gallery11 from "@/assets/gallery/bikta-11.jpg.asset.json";
 
-const gallery = [gallery01, gallery02, gallery03, gallery04, gallery05, gallery06, gallery07, gallery08, gallery09, gallery10, gallery11];
+const fallbackGallery = [gallery01, gallery02, gallery03, gallery04, gallery05, gallery06, gallery07, gallery08, gallery09, gallery10, gallery11];
 
 export function ReviewsSection() {
   const fetchReviews = useServerFn(getPublicReviews);
