@@ -18,8 +18,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import logo from "@/assets/bikta-logo.png.asset.json";
 import {
-  DURATIONS, HOURLY_RATE, PURPOSES, priceFor, formatILS, formatDateTime, formatTime, type PurposeId,
+  HOURLY_RATE, PURPOSES, priceFor, formatILS, formatDateTime, formatTime, type PurposeId,
 } from "@/lib/booking-rules";
+
+const DURATIONS: { hours: number; label: string; sub?: string }[] = [
+  { hours: 1, label: "שעה" }, { hours: 2, label: "שעתיים" }, { hours: 3, label: "3 שעות" },
+  { hours: 6, label: "חצי יום", sub: "6 שעות" }, { hours: 12, label: "יום מלא", sub: "12 שעות" },
+];
 import { getBusy, createBooking, confirmPayment } from "@/lib/bookings.functions";
 
 export const Route = createFileRoute("/")({
@@ -298,7 +303,7 @@ function StepPay({ purpose, startIso, hours, form, onBack, onPaid }: {
       if (e.data.type === "success") {
         try {
           const r = await confirm({ data: { token } });
-          onPaid(token, r.accessCode ?? "");
+          if (r.ok) onPaid(token, "");
         } catch { toast.error("התשלום התקבל אך אירעה תקלה ברישום. נציג יחזור אליכם."); }
       } else {
         setToken(null);
@@ -312,7 +317,8 @@ function StepPay({ purpose, startIso, hours, form, onBack, onPaid }: {
   const start = async () => {
     setLoading(true);
     try {
-      const r = await create({ data: { purpose, startsAt: startIso, hours: hours as 1, ...form, notes: form.notes || undefined } });
+      const endsAt = new Date(new Date(startIso).getTime() + hours * 3600_000).toISOString();
+      const r = await create({ data: { purpose, startsAt: startIso, endsAt, ...form, notes: form.notes || undefined } });
       setToken(r.token);
     } catch (err: any) { toast.error(err?.message ?? "לא הצלחנו ליצור הזמנה"); }
     finally { setLoading(false); }
@@ -384,10 +390,6 @@ function Celebration({ token, accessCode, startIso, hours, purpose, total, name 
             <Row k="מטרה" v={PURPOSES.find((x) => x.id === purpose)?.label} />
             <Row k="שולם" v={formatILS(total)} />
           </dl>
-          <div className="mt-5 rounded-2xl bg-primary p-4 text-center text-primary-foreground">
-            <div className="flex items-center justify-center gap-2 text-sm opacity-80"><KeyRound className="h-4 w-4" /> קוד כניסה לבקתה</div>
-            <div className="mt-1 font-display text-4xl font-bold tracking-[0.3em]">{accessCode}</div>
-          </div>
           <p className="mt-4 text-xs text-muted-foreground">הוראות הגעה: החוזה מלובלין 18 — עולים קטע אחד של מדרגות, יוצאים מהבניין שמאלה, דלת ברזל. להוראות כניסה ופרטים נוספים פנו אלינו: <a href="tel:+972539000374" dir="ltr" className="text-accent underline">053-900-0374</a></p>
         </div>
         <div className="mt-6 rounded-2xl border border-border bg-card p-4 text-sm">
