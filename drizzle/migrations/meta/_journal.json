@@ -8,6 +8,13 @@
       "when": 1790700765064,
       "tag": "0000_bookings_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790776595877,
+      "tag": "0001_drinks_settings_manual",
+      "breakpoints": true
     }
   ]
 }
