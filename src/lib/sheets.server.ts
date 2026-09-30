@@ -24,13 +24,13 @@ export type IncomeRow = {
   method: string; paid: boolean; status: string;
 };
 
-export async function appendIncome(row: IncomeRow) {
+export async function appendIncome(row: IncomeRow): Promise<boolean> {
   const h = headers();
-  if (!h) return;
+  if (!h) return false;
   try {
     const tab = monthTab(row.date);
     const res = await fetch(`${GATEWAY}/values/'${tab}'!A${FIRST_ROW}:C500`, { headers: h });
-    if (!res.ok) { console.error(`Sheets read failed [${res.status}]: ${await res.text()}`); return; }
+    if (!res.ok) { console.error(`Sheets read failed [${res.status}]: ${await res.text()}`); return false; }
     const values = ((await res.json()) as { values?: string[][] }).values ?? [];
     let i = values.findIndex((r) => !(r[2] ?? "").trim());
     if (i === -1) i = values.length;
@@ -39,8 +39,9 @@ export async function appendIncome(row: IncomeRow) {
     const number = num(values[i]?.[0]) || prevNum + 1;
     const body = { values: [[number, dm(row.date), row.name, row.hours, row.drinks, row.paid ? dm(new Date()) : "", row.method, row.amount, row.paid, false, row.status]] };
     const w = await fetch(`${GATEWAY}/values/'${tab}'!A${rowNum}:K${rowNum}?valueInputOption=USER_ENTERED`, { method: "PUT", headers: h, body: JSON.stringify(body) });
-    if (!w.ok) console.error(`Sheets write failed [${w.status}]: ${await w.text()}`);
-  } catch (e) { console.error("Sheets sync error", e); }
+    if (!w.ok) { console.error(`Sheets write failed [${w.status}]: ${await w.text()}`); return false; }
+    return true;
+  } catch (e) { console.error("Sheets sync error", e); return false; }
 }
 
 /** Monthly total from the sheet: the value next to "סך הכנסות לחודש זה", else sum of column H. */

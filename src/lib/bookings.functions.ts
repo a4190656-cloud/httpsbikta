@@ -318,6 +318,26 @@ export const adminRevenue = createServerFn({ method: "POST" })
     return { months: Object.values(months), sheet };
   });
 
+export const adminAddTransaction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    type: z.enum(["income", "expense"]), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    description: z.string().trim().min(1).max(120), amount: z.number().positive().max(1_000_000),
+    method: z.string().trim().max(30), notes: z.string().trim().max(200).optional(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { appendIncome } = await import("./sheets.server");
+    const expense = data.type === "expense";
+    const ok = await appendIncome({
+      date: new Date(`${data.date}T12:00:00+03:00`), name: data.description, hours: "",
+      drinks: data.notes ?? "", amount: expense ? -data.amount : data.amount,
+      method: data.method, paid: true, status: expense ? "הוצאה" : "הכנסה ידנית",
+    });
+    if (!ok) throw new Error("לא הצלחנו לרשום בגיליון, נסו שוב");
+    return { ok: true };
+  });
+
 export const adminListReviews = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
