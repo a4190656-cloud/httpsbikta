@@ -112,7 +112,7 @@ function hebrewNumeral(n: number): string {
   const rest = n % 100;
   if (rest === 15) s += "טו";
   else if (rest === 16) s += "טז";
-  else s += tens[Math.floor(rest / 10)] + ones[rest % 10];
+  else s += (tens[Math.floor(rest / 10)] ?? "") + (ones[rest % 10] ?? "");
   if (s.length === 1) return s + "׳";
   return s.slice(0, -1) + "״" + s.slice(-1);
 }
