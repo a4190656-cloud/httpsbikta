@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CheckoutTestRouteImport } from './routes/checkout-test'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as ManageTokenRouteImport } from './routes/manage.$token'
+import { Route as ApiPublicGalleryFileIdRouteImport } from './routes/api/public/gallery.$fileId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -45,6 +46,11 @@ const ManageTokenRoute = ManageTokenRouteImport.update({
   path: '/manage/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicGalleryFileIdRoute = ApiPublicGalleryFileIdRouteImport.update({
+  id: '/api/public/gallery/$fileId',
+  path: '/api/public/gallery/$fileId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/checkout-test': typeof CheckoutTestRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/manage/$token': typeof ManageTokenRoute
+  '/api/public/gallery/$fileId': typeof ApiPublicGalleryFileIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/checkout-test': typeof CheckoutTestRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/manage/$token': typeof ManageTokenRoute
+  '/api/public/gallery/$fileId': typeof ApiPublicGalleryFileIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -68,12 +76,25 @@ export interface FileRoutesById {
   '/checkout-test': typeof CheckoutTestRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/manage/$token': typeof ManageTokenRoute
+  '/api/public/gallery/$fileId': typeof ApiPublicGalleryFileIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/checkout-test' | '/admin' | '/manage/$token'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/checkout-test'
+    | '/admin'
+    | '/manage/$token'
+    | '/api/public/gallery/$fileId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/checkout-test' | '/admin' | '/manage/$token'
+  to:
+    | '/'
+    | '/auth'
+    | '/checkout-test'
+    | '/admin'
+    | '/manage/$token'
+    | '/api/public/gallery/$fileId'
   id:
     | '__root__'
     | '/'
@@ -82,6 +103,7 @@ export interface FileRouteTypes {
     | '/checkout-test'
     | '/_authenticated/admin'
     | '/manage/$token'
+    | '/api/public/gallery/$fileId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -90,6 +112,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CheckoutTestRoute: typeof CheckoutTestRoute
   ManageTokenRoute: typeof ManageTokenRoute
+  ApiPublicGalleryFileIdRoute: typeof ApiPublicGalleryFileIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -136,6 +159,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManageTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/gallery/$fileId': {
+      id: '/api/public/gallery/$fileId'
+      path: '/api/public/gallery/$fileId'
+      fullPath: '/api/public/gallery/$fileId'
+      preLoaderRoute: typeof ApiPublicGalleryFileIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -156,6 +186,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CheckoutTestRoute: CheckoutTestRoute,
   ManageTokenRoute: ManageTokenRoute,
+  ApiPublicGalleryFileIdRoute: ApiPublicGalleryFileIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
