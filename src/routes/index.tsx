@@ -7,9 +7,10 @@ import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import {
   Trees, Home, ArrowLeft, ArrowRight,
-  Check, ShieldCheck, Clock, Loader2, CalendarDays, X, Minus, Plus, CupSoda, MessageCircle,
+  Check, ShieldCheck, Clock, Loader2, CalendarDays, X, Minus, Plus, CupSoda, MessageCircle, MessageSquareQuote,
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
+import { PhotoGallery, ReviewsSection } from "@/components/MediaSections";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { he } from "date-fns/locale";
@@ -88,6 +89,11 @@ function BookingPage() {
         <motion.div initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.1 } } }}>
           <motion.p variants={fade} className="text-sm font-medium tracking-wide text-accent">בקתה עם גינה פרטית · לכל מטרה</motion.p>
           <TypedHeadline text="המקום השקט שלכם, לפי שעה" />
+          <motion.div variants={fade} transition={{ delay: 1.1 }} className="mt-4 flex justify-center">
+            <Button asChild variant="secondary" className="h-auto rounded-full border border-accent/30 px-5 py-2.5 shadow-organic">
+              <a href="#reviews"><MessageSquareQuote className="h-4 w-4 text-accent" /><span className="font-semibold">מה אנשים חושבים עלינו?</span></a>
+            </Button>
+          </motion.div>
           <motion.p variants={fade} transition={{ delay: 1.3 }} className="mx-auto mt-4 max-w-xl text-muted-foreground">
             {formatILS(settings.hourlyRate)} לשעה, כולל מע״מ. הזמנה בקפיצות של חצי שעה.
           </motion.p>
@@ -120,6 +126,8 @@ function BookingPage() {
           </AnimatePresence>
         </div>
       </motion.section>
+      <ReviewsSection />
+      <PhotoGallery />
       <FloatingActions onDrinks={() => setDrinksOnly(true)} />
       <AnimatePresence>{drinksOnly && <DrinksOnly settings={settings} initialCart={range ? {} : cart} onClose={() => setDrinksOnly(false)} />}</AnimatePresence>
     </Shell>

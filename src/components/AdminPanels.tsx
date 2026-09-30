@@ -3,13 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { FileSpreadsheet, Plus, Settings2 } from "lucide-react";
+import { Eye, EyeOff, FileSpreadsheet, ImageUp, Plus, Settings2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DRINKS, PURPOSES, drinksTotal, formatILS, type DrinkCart, type DrinkPrices } from "@/lib/booking-rules";
-import { adminCreateManual, adminRevenue, adminSaveSettings, getSettings } from "@/lib/bookings.functions";
+import { adminAddReview, adminCreateManual, adminDeleteReview, adminListReviews, adminRevenue, adminSaveSettings, adminUpdateReview, getSettings } from "@/lib/bookings.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 const METHODS = ["מזומן", "העברה", "אחר"] as const;
 
@@ -153,5 +154,79 @@ export function SettingsPanel() {
         catch (e: any) { toast.error(e?.message ?? "שמירה נכשלה"); }
       }}>שמירת הגדרות</Button>
     </div>
+  );
+}
+
+export function ReviewsAdminPanel() {
+  const qc = useQueryClient();
+  const list = useServerFn(adminListReviews);
+  const add = useServerFn(adminAddReview);
+  const update = useServerFn(adminUpdateReview);
+  const remove = useServerFn(adminDeleteReview);
+  const { data, isLoading } = useQuery({ queryKey: ["admin-reviews"], queryFn: () => list() });
+  const [title, setTitle] = useState("");
+  const [uploading, setUploading] = useState(false);
+
+  const refresh = async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["admin-reviews"] }),
+      qc.invalidateQueries({ queryKey: ["public-reviews"] }),
+    ]);
+  };
+
+  const upload = async (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("אפשר להעלות קובץ תמונה בלבד"); return; }
+    if (file.size > 8 * 1024 * 1024) { toast.error("התמונה גדולה מדי — עד 8MB"); return; }
+    setUploading(true);
+    const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+    const path = `${crypto.randomUUID()}.${extension}`;
+    try {
+      const { error: uploadError } = await supabase.storage.from("customer-reviews").upload(path, file, { contentType: file.type, upsert: false });
+      if (uploadError) throw uploadError;
+      try {
+        await add({ data: { storagePath: path, title: title.trim() || undefined } });
+      } catch (error) {
+        await supabase.storage.from("customer-reviews").remove([path]);
+        throw error;
+      }
+      setTitle("");
+      toast.success("צילום התגובה נוסף לאתר");
+      await refresh();
+    } catch (error: any) { toast.error(error?.message ?? "העלאת התמונה נכשלה"); }
+    finally { setUploading(false); }
+  };
+
+  return (
+    <section className="glass mt-8 rounded-2xl p-5">
+      <div className="flex items-center gap-2"><ImageUp className="h-5 w-5 text-accent" /><h2 className="font-semibold">תגובות של לקוחות</h2></div>
+      <p className="mt-1 text-xs text-muted-foreground">העלו צילומי מסך של תגובות. רק תמונות שמסומנות כגלויות יופיעו בעמוד הראשי.</p>
+      <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-end">
+        <div className="flex-1 space-y-1"><Label>כותרת קצרה (לא חובה)</Label><Input value={title} maxLength={120} placeholder="למשל: סדנה באווירה נהדרת" onChange={(e) => setTitle(e.target.value)} /></div>
+        <Button asChild disabled={uploading}>
+          <label className="cursor-pointer"><ImageUp className="h-4 w-4" />{uploading ? "מעלה…" : "העלאת צילום תגובה"}<input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading} onChange={(e) => { void upload(e.target.files?.[0]); e.currentTarget.value = ""; }} /></label>
+        </Button>
+      </div>
+      {isLoading ? <p className="mt-4 text-sm text-muted-foreground">טוען תגובות…</p> : (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {(data?.reviews ?? []).map((review) => (
+            <div key={review.id} className="overflow-hidden rounded-xl border border-border bg-card">
+              <img src={review.imageUrl} alt={review.title || "צילום תגובת לקוח"} className="h-48 w-full object-contain" />
+              <div className="border-t border-border p-3">
+                <div className="truncate text-sm font-medium">{review.title || "ללא כותרת"}</div>
+                <div className="mt-3 flex items-center gap-2">
+                  <Button size="sm" variant={review.isVisible ? "secondary" : "outline"} onClick={async () => { await update({ data: { id: review.id, isVisible: !review.isVisible, sortOrder: review.sortOrder } }); await refresh(); }}>
+                    {review.isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}{review.isVisible ? "גלוי" : "מוסתר"}
+                  </Button>
+                  <div className="ms-auto flex items-center gap-1"><Label className="text-xs">סדר</Label><Input type="number" min={0} max={999} defaultValue={review.sortOrder} className="h-8 w-16" onBlur={async (e) => { await update({ data: { id: review.id, isVisible: review.isVisible, sortOrder: Number(e.target.value) || 0 } }); await refresh(); }} /></div>
+                  <Button size="icon" variant="ghost" aria-label="מחיקת תגובה" onClick={async () => { if (!confirm("למחוק את צילום התגובה?")) return; await remove({ data: { id: review.id } }); toast.success("התגובה נמחקה"); await refresh(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {!data?.reviews.length && <p className="text-sm text-muted-foreground">עדיין לא הועלו צילומי תגובות.</p>}
+        </div>
+      )}
+    </section>
   );
 }

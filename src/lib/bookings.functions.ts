@@ -17,6 +17,23 @@ async function loadSettings(): Promise<Settings> {
 
 export const getSettings = createServerFn({ method: "GET" }).handler(async () => loadSettings());
 
+type ReviewRow = { id: string; storage_path: string; title: string | null; is_visible: boolean; sort_order: number; created_at: string };
+
+async function reviewsWithUrls(rows: ReviewRow[]) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return Promise.all(rows.map(async (review) => {
+    const { data } = await supabaseAdmin.storage.from("customer-reviews").createSignedUrl(review.storage_path, 3600);
+    return { id: review.id, title: review.title, isVisible: review.is_visible, sortOrder: review.sort_order, imageUrl: data?.signedUrl ?? "" };
+  }));
+}
+
+export const getPublicReviews = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin.from("customer_reviews").select("id, storage_path, title, is_visible, sort_order, created_at")
+    .eq("is_visible", true).order("sort_order").order("created_at", { ascending: false });
+  return { reviews: await reviewsWithUrls((data ?? []) as ReviewRow[]) };
+});
+
 async function busyBetween(timeMin: string, timeMax: string): Promise<Busy[]> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { gcalBusy } = await import("./gcal.server");
@@ -299,4 +316,50 @@ export const adminRevenue = createServerFn({ method: "POST" })
     let sheet: { total: number; rows: number } | null = null;
     try { sheet = await sheetMonthTotal(); } catch (e) { console.error(e); }
     return { months: Object.values(months), sheet };
+  });
+
+export const adminListReviews = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { data, error } = await context.supabase.from("customer_reviews").select("id, storage_path, title, is_visible, sort_order, created_at")
+      .order("sort_order").order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return { reviews: await reviewsWithUrls((data ?? []) as ReviewRow[]) };
+  });
+
+export const adminAddReview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ storagePath: z.string().min(1).max(300), title: z.string().trim().max(120).optional() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { count } = await context.supabase.from("customer_reviews").select("id", { count: "exact", head: true });
+    const { error } = await context.supabase.from("customer_reviews").insert({ storage_path: data.storagePath, title: data.title || null, sort_order: count ?? 0 });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminUpdateReview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid(), isVisible: z.boolean(), sortOrder: z.number().int().min(0).max(999) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase.from("customer_reviews").update({ is_visible: data.isVisible, sort_order: data.sortOrder }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminDeleteReview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: review } = await supabaseAdmin.from("customer_reviews").select("storage_path").eq("id", data.id).maybeSingle();
+    if (!review) throw new Error("התגובה לא נמצאה");
+    const { error: storageError } = await supabaseAdmin.storage.from("customer-reviews").remove([review.storage_path]);
+    if (storageError) throw new Error(storageError.message);
+    const { error } = await supabaseAdmin.from("customer_reviews").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
