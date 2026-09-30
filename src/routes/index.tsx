@@ -273,10 +273,10 @@ function StepTime(props: {
         </div>
         <motion.div key={price.total} initial={{ scale: 1.15 }} animate={{ scale: 1 }} className="font-display text-2xl font-bold text-primary">{formatILS(price.total)}</motion.div>
       </div>
-      {!range && drinksTotal(props.cart, props.settings.drink_prices) > 0 && (
+      {!range && drinksTotal(props.cart, props.settings.drinkPrices) > 0 && (
         <p className="mt-4 text-center text-sm text-muted-foreground">לא נבחרו שעות — אפשר להמשיך ולהזמין רק את השתייה</p>
       )}
-      <Nav onNext={props.onNext} disabled={!range && drinksTotal(props.cart, props.settings.drink_prices) <= 0} nextLabel={!range && drinksTotal(props.cart, props.settings.drink_prices) > 0 ? "המשך להזמנת שתייה" : "המשך"} />
+      <Nav onNext={props.onNext} disabled={!range && drinksTotal(props.cart, props.settings.drinkPrices) <= 0} nextLabel={!range && drinksTotal(props.cart, props.settings.drinkPrices) > 0 ? "המשך להזמנת שתייה" : "המשך"} />
     </div>
   );
 }
