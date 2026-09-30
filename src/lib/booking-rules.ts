@@ -1,32 +1,53 @@
 // Shared, browser-safe booking rules.
-export const HOURLY_RATE = 40; // ₪ per hour, VAT included
+export const HOURLY_RATE = 40; // default ₪ per hour, VAT included (admin-editable in settings)
 export const VAT_RATE = 0.18;
+export const SLOT_MIN = 30;
 
 export const PURPOSES = [
-  { id: "clinic", label: "קליניקה", desc: "טיפולים ופגישות אישיות בשקט מוחלט" },
-  { id: "studio", label: "סטודיו", desc: "יוגה, צילום, יצירה ותנועה" },
-  { id: "office", label: "משרד / עבודה שקטה", desc: "יום עבודה מרוכז מול הגינה" },
-  { id: "meetings", label: "פגישות והרצאות", desc: "סדנאות, ישיבות צוות ומפגשים" },
-  { id: "other", label: "אחר", desc: "מפגש פרטי או כל מטרה אחרת" },
+  { id: "clinic", label: "קליניקה", desc: "טיפולים ופגישות אישיות" },
+  { id: "studio", label: "סטודיו", desc: "יוגה, צילום, יצירה" },
+  { id: "office", label: "משרד / עבודה", desc: "יום עבודה מרוכז" },
+  { id: "meetings", label: "פגישות והרצאות", desc: "סדנאות וישיבות" },
+  { id: "other", label: "אחר", desc: "כל מטרה אחרת" },
 ] as const;
 export type PurposeId = (typeof PURPOSES)[number]["id"];
 
-export const DURATIONS = [
-  { hours: 1, label: "שעה" },
-  { hours: 2, label: "שעתיים" },
-  { hours: 3, label: "3 שעות" },
-  { hours: 6, label: "חצי יום", sub: "6 שעות" },
-  { hours: 12, label: "יום מלא", sub: "12 שעות" },
-];
+export const DRINKS = [
+  { id: "can", label: "פחית" },
+  { id: "spring", label: "ספרינג" },
+  { id: "water", label: "מים" },
+  { id: "soda", label: "סודה" },
+] as const;
+export type DrinkId = (typeof DRINKS)[number]["id"];
+export type DrinkPrices = Record<DrinkId, number>;
+export type DrinkCart = Partial<Record<DrinkId, number>>;
+export const DEFAULT_DRINK_PRICES: DrinkPrices = { can: 6, spring: 6, water: 4, soda: 4 };
+export type Settings = { hourlyRate: number; drinkPrices: DrinkPrices };
+export const DEFAULT_SETTINGS: Settings = { hourlyRate: HOURLY_RATE, drinkPrices: DEFAULT_DRINK_PRICES };
 
-export function priceFor(hours: number) {
-  const total = HOURLY_RATE * hours;
-  const subtotal = Math.round((total / (1 + VAT_RATE)) * 100) / 100;
-  const vat = Math.round((total - subtotal) * 100) / 100;
-  return { subtotal, vat, total };
+export function drinksTotal(cart: DrinkCart, prices: DrinkPrices) {
+  return DRINKS.reduce((s, d) => s + (cart[d.id] ?? 0) * (prices[d.id] ?? 0), 0);
+}
+export function drinksText(cart: DrinkCart) {
+  return DRINKS.filter((d) => (cart[d.id] ?? 0) > 0).map((d) => `${cart[d.id]} ${d.label}`).join(", ");
 }
 
-export const purposeLabel = (id: string) => PURPOSES.find((p) => p.id === id)?.label ?? id;
+export function splitVat(total: number) {
+  const subtotal = Math.round((total / (1 + VAT_RATE)) * 100) / 100;
+  return { subtotal, vat: Math.round((total - subtotal) * 100) / 100, total };
+}
+export function priceFor(hours: number, rate = HOURLY_RATE, drinks = 0) {
+  const room = Math.round(rate * hours * 100) / 100;
+  return { room, drinks, ...splitVat(room + drinks) };
+}
+export function hoursLabel(h: number) {
+  if (h === 0.5) return "חצי שעה";
+  if (h === 1) return "שעה";
+  if (h === 2) return "שעתיים";
+  return `${h} שעות`;
+}
+
+export const purposeLabel = (id: string | null) => (id === "drinks" ? "שתייה" : PURPOSES.find((p) => p.id === id)?.label ?? id ?? "");
 
 // Israeli holidays (non-business days), YYYY-MM-DD
 const HOLIDAYS = new Set([

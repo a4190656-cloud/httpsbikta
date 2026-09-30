@@ -43,16 +43,23 @@ export type Database = {
           access_code: string | null
           attendees: number
           created_at: string
+          drinks: Json
+          drinks_total: number
+          duration_hours: number
           email: string
           ends_at: string
           full_name: string
           google_event_id: string | null
           hours: number
           id: string
+          kind: string
           manage_token: string
           notes: string | null
+          paid_at: string | null
+          payment_method: string
           phone: string
           purpose: string
+          source: string
           starts_at: string
           status: string
           subtotal: number
@@ -63,16 +70,23 @@ export type Database = {
           access_code?: string | null
           attendees?: number
           created_at?: string
-          email: string
+          drinks?: Json
+          drinks_total?: number
+          duration_hours?: number
+          email?: string
           ends_at: string
           full_name: string
           google_event_id?: string | null
           hours: number
           id?: string
+          kind?: string
           manage_token: string
           notes?: string | null
+          paid_at?: string | null
+          payment_method?: string
           phone: string
           purpose: string
+          source?: string
           starts_at: string
           status?: string
           subtotal: number
@@ -83,21 +97,49 @@ export type Database = {
           access_code?: string | null
           attendees?: number
           created_at?: string
+          drinks?: Json
+          drinks_total?: number
+          duration_hours?: number
           email?: string
           ends_at?: string
           full_name?: string
           google_event_id?: string | null
           hours?: number
           id?: string
+          kind?: string
           manage_token?: string
           notes?: string | null
+          paid_at?: string | null
+          payment_method?: string
           phone?: string
           purpose?: string
+          source?: string
           starts_at?: string
           status?: string
           subtotal?: number
           total?: number
           vat?: number
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          drink_prices: Json
+          hourly_rate: number
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          drink_prices?: Json
+          hourly_rate?: number
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          drink_prices?: Json
+          hourly_rate?: number
+          id?: number
+          updated_at?: string
         }
         Relationships: []
       }
