@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
-import { businessDaysUntil, canCancel, formatDateTime, formatILS, purposeLabel } from "@/lib/booking-rules";
+import { businessDaysUntil, canCancel, formatDateTime, formatILS, hebrewDate, purposeLabel } from "@/lib/booking-rules";
 import { cancelBooking, getBookingByToken } from "@/lib/bookings.functions";
 
 export const Route = createFileRoute("/manage/$token")({
@@ -35,7 +35,7 @@ function Manage() {
         ) : (
           <div className="glass mt-6 rounded-3xl p-6">
             <dl className="space-y-2 text-sm">
-              {[["שם", b.full_name], ["מועד", formatDateTime(b.starts_at)], ["משך", `${b.duration_hours} שעות`], ["מטרה", purposeLabel(b.purpose)], ["סכום", formatILS(Number(b.total))], ["סטטוס", STATUS[b.status] ?? b.status]].map(([k, v]) => (
+              {[["שם", b.full_name], ["מועד", formatDateTime(b.starts_at)], ["תאריך עברי", hebrewDate(b.starts_at)], ["משך", `${b.duration_hours} שעות`], ["מטרה", purposeLabel(b.purpose)], ["סכום", formatILS(Number(b.total))], ["סטטוס", STATUS[b.status] ?? b.status]].map(([k, v]) => (
                 <div key={k} className="flex justify-between"><dt className="text-muted-foreground">{k}</dt><dd className="font-medium">{v}</dd></div>
               ))}
             </dl>

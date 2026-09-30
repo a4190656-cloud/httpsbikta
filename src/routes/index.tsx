@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import logo from "@/assets/bikta-logo.png.asset.json";
 import {
-  DEFAULT_SETTINGS, DRINKS, priceFor, drinksTotal, hoursLabel, formatILS, formatDateTime, formatTime,
+  DEFAULT_SETTINGS, DRINKS, priceFor, drinksTotal, hoursLabel, formatILS, formatDateTime, formatTime, hebrewDate,
   type DrinkCart, type Settings,
 } from "@/lib/booking-rules";
 import { getBusy, createBooking, confirmPayment, createDrinkOrder, getSettings } from "@/lib/bookings.functions";
@@ -265,9 +265,10 @@ function StepTime(props: {
         <div className="mt-3"><DrinkCounters cart={props.cart} setCart={props.setCart} prices={settings.drinkPrices} /></div>
       </div>
 
-      <div className="mt-6 flex items-center justify-between rounded-2xl bg-secondary px-5 py-4">
+      <div className="mt-6 flex items-center justify-between gap-4 rounded-2xl bg-secondary px-5 py-4">
         <div className="text-sm text-secondary-foreground">
           {range ? <>{formatDateTime(range.start)}–{formatTime(range.end)} · {hoursLabel(hours)}</> : "בחרו טווח שעות"}
+          {range && <div className="mt-0.5 text-xs text-secondary-foreground/70">{hebrewDate(range.start)}</div>}
         </div>
         <motion.div key={price.total} initial={{ scale: 1.15 }} animate={{ scale: 1 }} className="font-display text-2xl font-bold text-primary">{formatILS(price.total)}</motion.div>
       </div>
@@ -369,7 +370,10 @@ function StepPay({ range, hours, cart, settings, form, onBack, onPaid }: {
         <ShieldCheck className="h-4 w-4" /> ביטול ללא עלות מתאפשר עד 2 ימי עסקים לפני המועד בלבד.
       </div>
       <div className="mt-6 rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays className="h-4 w-4" />{formatDateTime(range.start)}–{formatTime(range.end)} · {hoursLabel(hours)}</div>
+        <div className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />{formatDateTime(range.start)}–{formatTime(range.end)} · {hoursLabel(hours)}</div>
+          <div className="mt-1 ps-6 text-xs">{hebrewDate(range.start)}</div>
+        </div>
         <dl className="mt-5 space-y-3 text-sm">
           <Row k={`${formatILS(settings.hourlyRate)} × ${hoursLabel(hours)}`} v={formatILS(p.room)} />
           {p.drinks > 0 && <Row k="שתייה" v={formatILS(p.drinks)} />}
@@ -463,6 +467,7 @@ function Celebration({ token, startIso, hours, total, name }: { token: string; s
           <img src={logo.url} alt="בקתה B" className="mx-auto h-16 w-auto" />
           <dl className="mt-5 space-y-2 text-sm">
             <Row k="מועד" v={formatDateTime(startIso)} />
+            <Row k="תאריך עברי" v={hebrewDate(startIso)} />
             <Row k="משך" v={hoursLabel(hours)} />
             <Row k="שולם" v={formatILS(total)} />
           </dl>
