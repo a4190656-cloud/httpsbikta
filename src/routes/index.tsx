@@ -288,6 +288,7 @@ function StepDetails({ form, setForm, onBack, onNext }: { form: Form; setForm: (
   const errors = {
     fullName: form.fullName.trim().length < 2 ? "נא להזין שם מלא" : "",
     phone: !phoneRe.test(form.phone) ? "מספר טלפון ישראלי לא תקין" : "",
+  };
   const valid = !errors.fullName && !errors.phone && form.attendees >= 1;
   const set = (k: keyof Form, v: any) => setForm({ ...form, [k]: v });
   return (
