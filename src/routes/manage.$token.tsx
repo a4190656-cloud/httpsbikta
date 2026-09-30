@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
-import { businessDaysUntil, canCancel, formatDateTime, formatILS, purposeLabel } from "@/lib/booking-rules";
+import { businessDaysUntil, canCancel, formatDateTime, formatILS, hebrewDate, purposeLabel } from "@/lib/booking-rules";
 import { cancelBooking, getBookingByToken } from "@/lib/bookings.functions";
 
 export const Route = createFileRoute("/manage/$token")({
