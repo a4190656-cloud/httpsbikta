@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ImageIcon, MessageSquareQuote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getPublicReviews } from "@/lib/bookings.functions";
+import { getGalleryImages } from "@/lib/gallery.functions";
 import gallery01 from "@/assets/gallery/bikta-01.jpg.asset.json";
 import gallery02 from "@/assets/gallery/bikta-02.jpg.asset.json";
 import gallery03 from "@/assets/gallery/bikta-03.jpg.asset.json";
@@ -17,7 +18,7 @@ import gallery09 from "@/assets/gallery/bikta-09.jpg.asset.json";
 import gallery10 from "@/assets/gallery/bikta-10.jpg.asset.json";
 import gallery11 from "@/assets/gallery/bikta-11.jpg.asset.json";
 
-const gallery = [gallery01, gallery02, gallery03, gallery04, gallery05, gallery06, gallery07, gallery08, gallery09, gallery10, gallery11];
+const fallbackGallery = [gallery01, gallery02, gallery03, gallery04, gallery05, gallery06, gallery07, gallery08, gallery09, gallery10, gallery11];
 
 export function ReviewsSection() {
   const fetchReviews = useServerFn(getPublicReviews);
@@ -58,8 +59,28 @@ export function ReviewsSection() {
   );
 }
 
+interface GalleryEntry {
+  src: string;
+  key: string;
+}
+
 export function PhotoGallery() {
   const [active, setActive] = useState<number | null>(null);
+  const fetchImages = useServerFn(getGalleryImages);
+  const { data } = useQuery({
+    queryKey: ["drive-gallery"],
+    queryFn: () => fetchImages(),
+    staleTime: 60_000,
+  });
+
+  const driveEntries: GalleryEntry[] = (data ?? []).map((img) => ({
+    src: `/api/public/gallery/${img.id}`,
+    key: img.id,
+  }));
+  const entries: GalleryEntry[] = driveEntries.length
+    ? driveEntries
+    : fallbackGallery.map((asset, i) => ({ src: asset.url, key: `fallback-${i}` }));
+
   return (
     <section id="gallery" className="scroll-mt-28 py-14 sm:py-20">
       <div className="mx-auto max-w-6xl px-5">
@@ -71,22 +92,22 @@ export function PhotoGallery() {
           <p className="hidden max-w-sm text-sm text-muted-foreground sm:block">החלל, הפינות השקטות והגינה הפרטית שמחכה לכם.</p>
         </motion.div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-          {gallery.map((asset, index) => (
-            <motion.div key={asset.url} initial={{ opacity: 0, scale: 0.97 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: (index % 4) * 0.05 }}
+          {entries.map((entry, index) => (
+            <motion.div key={entry.key} initial={{ opacity: 0, scale: 0.97 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: (index % 4) * 0.05 }}
               className={index === 0 || index === 5 ? "col-span-2 row-span-2" : ""}>
               <Button variant="ghost" onClick={() => setActive(index)} aria-label={`פתיחת תמונה ${index + 1}`}
                 className="group h-full min-h-36 w-full overflow-hidden rounded-xl border-0 p-0 sm:min-h-44">
-                <img src={asset.url} alt={`בקתה B והגינה הפרטית — תמונה ${index + 1}`} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img src={entry.src} alt={`בקתה B והגינה הפרטית — תמונה ${index + 1}`} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
               </Button>
             </motion.div>
           ))}
         </div>
       </div>
       <AnimatePresence>
-        {active !== null && (
+        {active !== null && entries[active] && (
           <motion.div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/85 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActive(null)}>
             <Button size="icon" variant="secondary" aria-label="סגירת תמונה" onClick={() => setActive(null)} className="absolute left-4 top-4 rounded-full"><X className="h-5 w-5" /></Button>
-            <motion.img src={gallery[active]?.url} alt={`בקתה B — תמונה ${active + 1}`} onClick={(event) => event.stopPropagation()}
+            <motion.img src={entries[active].src} alt={`בקתה B — תמונה ${active + 1}`} onClick={(event) => event.stopPropagation()}
               className="max-h-[88vh] max-w-[94vw] rounded-xl object-contain shadow-organic" initial={{ scale: 0.92 }} animate={{ scale: 1 }} exit={{ scale: 0.92 }} />
           </motion.div>
         )}
