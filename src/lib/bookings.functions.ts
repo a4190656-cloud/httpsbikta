@@ -119,7 +119,7 @@ async function syncPaid(b: BookingRow) {
     const purposeSuffix = b.purpose && b.purpose !== "other" ? ` (${purposeLabel(b.purpose)})` : "";
     eventId = await gcalCreate({
       summary: `השכרת בקתה B - ${b.full_name}${purposeSuffix}`,
-      description: `טלפון: ${b.phone}\n${b.email ? `אימייל: ${b.email}\n` : ""}משתתפים: ${b.attendees}\nמשך: ${b.duration_hours} שעות\n${drinks ? `שתייה: ${drinks}\n` : ""}סכום: ₪${b.total}\n${b.notes ? `הערות: ${b.notes}` : ""}`,
+      description: `טלפון: ${b.phone}\n${b.email ? `אימייל: ${b.email}\n` : ""}משך: ${b.duration_hours} שעות\n${drinks ? `שתייה: ${drinks}\n` : ""}סכום: ₪${b.total}\n${b.notes ? `הערות: ${b.notes}` : ""}`,
       start: b.starts_at, end: b.ends_at,
     });
   }
