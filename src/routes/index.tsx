@@ -388,7 +388,7 @@ function Celebration({ token, accessCode, startIso, hours, purpose, total, name 
             <div className="flex items-center justify-center gap-2 text-sm opacity-80"><KeyRound className="h-4 w-4" /> קוד כניסה לבקתה</div>
             <div className="mt-1 font-display text-4xl font-bold tracking-[0.3em]">{accessCode}</div>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">הקישו את הקוד במנעול שליד דלת העץ. הגינה פתוחה בשער הצדדי. נא להשאיר את המקום כפי שמצאתם.</p>
+          <p className="mt-4 text-xs text-muted-foreground">הוראות הגעה: החוזה מלובלין 18 — עולים קטע אחד של מדרגות, יוצאים מהבניין שמאלה, דלת ברזל. להוראות כניסה ופרטים נוספים פנו אלינו: <a href="tel:+972539000374" dir="ltr" className="text-accent underline">053-900-0374</a></p>
         </div>
         <div className="mt-6 rounded-2xl border border-border bg-card p-4 text-sm">
           <div className="font-semibold">קישור אישי לניהול ההזמנה</div>
