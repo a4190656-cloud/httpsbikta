@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DRINKS, PURPOSES, drinksTotal, formatILS, type DrinkCart, type DrinkPrices } from "@/lib/booking-rules";
-import { adminAddReview, adminCreateManual, adminDeleteReview, adminListReviews, adminRevenue, adminSaveSettings, adminUpdateReview, getSettings } from "@/lib/bookings.functions";
+import { adminAddTransaction, adminAddReview, adminCreateManual, adminDeleteReview, adminListReviews, adminRevenue, adminSaveSettings, adminUpdateReview, getSettings } from "@/lib/bookings.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 const METHODS = ["מזומן", "העברה", "אחר"] as const;
@@ -98,7 +98,7 @@ export function RevenuePanel() {
   const label = (k: string) => new Date(`${k}-01T12:00`).toLocaleDateString("he-IL", { month: "short" });
   return (
     <div className="glass mt-6 rounded-2xl p-5">
-      <h2 className="font-semibold">הכנסות</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">הכנסות</h2><TransactionDialog /></div>
       {isLoading ? <p className="mt-2 text-sm text-muted-foreground">טוען…</p> : (
         <div className="mt-4 grid gap-6 md:grid-cols-[1fr_1.4fr]">
           <div className="grid grid-cols-2 gap-3">
@@ -123,6 +123,52 @@ export function RevenuePanel() {
       )}
       <p className="mt-3 text-xs text-muted-foreground"><span className="inline-block h-2 w-2 rounded-full bg-primary" /> סה״כ · <span className="inline-block h-2 w-2 rounded-full bg-accent" /> שתייה</p>
     </div>
+  );
+}
+
+function TransactionDialog() {
+  const qc = useQueryClient();
+  const add = useServerFn(adminAddTransaction);
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(new Date());
+  const empty = { type: "income" as "income" | "expense", date: today, description: "", amount: "", method: "מזומן", notes: "" };
+  const [open, setOpen] = useState(false); const [saving, setSaving] = useState(false); const [f, setF] = useState(empty);
+  const submit = async () => {
+    if (!f.description.trim()) { toast.error("נא להזין תיאור"); return; }
+    if (!(Number(f.amount) > 0)) { toast.error("נא להזין סכום"); return; }
+    setSaving(true);
+    try {
+      await add({ data: { type: f.type, date: f.date, description: f.description, amount: Number(f.amount), method: f.method, notes: f.notes || undefined } });
+      toast.success(f.type === "expense" ? "ההוצאה נרשמה בגיליון" : "ההכנסה נרשמה בגיליון");
+      qc.invalidateQueries({ queryKey: ["revenue"] }); setOpen(false); setF(empty);
+    } catch (e: any) { toast.error(e?.message ?? "שמירה נכשלה"); } finally { setSaving(false); }
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button size="sm" variant="outline"><Plus className="h-4 w-4" /> תנועה ידנית</Button></DialogTrigger>
+      <DialogContent dir="rtl" className="sm:max-w-md">
+        <DialogHeader><DialogTitle>הוספת הכנסה / הוצאה</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-2 gap-2 rounded-full bg-muted p-1">
+          {(["income", "expense"] as const).map((t) => (
+            <button key={t} type="button" onClick={() => setF({ ...f, type: t })}
+              className={`rounded-full py-2 text-sm font-medium transition ${f.type === t ? (t === "income" ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground") : "text-muted-foreground"}`}>
+              {t === "income" ? "הכנסה" : "הוצאה"}
+            </button>
+          ))}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1 sm:col-span-2"><Label>תיאור</Label><Input value={f.description} maxLength={120} placeholder={f.type === "expense" ? "למשל: ניקיון, קניית שתייה" : "למשל: שם לקוח"} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
+          <div className="space-y-1"><Label>תאריך</Label><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></div>
+          <div className="space-y-1"><Label>סכום (₪)</Label><Input type="number" min={0} value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></div>
+          <div className="space-y-1"><Label>אמצעי תשלום</Label>
+            <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={f.method} onChange={(e) => setF({ ...f, method: e.target.value })}>
+              {["מזומן", "העברה", "אשראי", "אחר"].map((m) => <option key={m}>{m}</option>)}
+            </select></div>
+          <div className="space-y-1"><Label>הערה</Label><Input value={f.notes} maxLength={200} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
+        </div>
+        <p className="text-xs text-muted-foreground">התנועה תירשם בגיליון בלשונית של חודש התאריך{f.type === "expense" ? ", כסכום שלילי" : ""}.</p>
+        <Button className="w-full" disabled={saving} onClick={submit}>{saving ? "שומר…" : "שמירה בגיליון"}</Button>
+      </DialogContent>
+    </Dialog>
   );
 }
 
