@@ -113,7 +113,7 @@ function BookingPage() {
               transition={{ duration: 0.28, ease: "easeOut" }}>
               {step === 0 && (
                 <StepTime date={date} setDate={(d) => { setDate(d); setRange(null); }} range={range} setRange={setRange}
-                  cart={cart} setCart={setCart} settings={settings} onNext={() => go(1)} />
+                  cart={cart} setCart={setCart} settings={settings} onNext={() => (range ? go(1) : setDrinksOnly(true))} />
               )}
               {step === 1 && <StepDetails form={form} setForm={setForm} onBack={() => go(0)} onNext={() => go(2)} />}
               {step === 2 && range && (
@@ -124,7 +124,7 @@ function BookingPage() {
           </AnimatePresence>
         </div>
       </motion.section>
-      <AnimatePresence>{drinksOnly && <DrinksOnly settings={settings} onClose={() => setDrinksOnly(false)} />}</AnimatePresence>
+      <AnimatePresence>{drinksOnly && <DrinksOnly settings={settings} initialCart={range ? {} : cart} onClose={() => setDrinksOnly(false)} />}</AnimatePresence>
     </Shell>
   );
 }
@@ -237,6 +237,7 @@ function StepTime(props: {
       <div className="mt-6 grid gap-6 md:grid-cols-[auto_1fr]">
         <div className="rounded-2xl border border-border bg-card p-2 self-start">
           <Calendar locale={he} dir="rtl" mode="single" selected={date} onSelect={(d) => { props.setDate(d); setAnchor(null); }} disabled={(d) => d < dayStart(new Date())} className="p-3 pointer-events-auto" />
+          {date && <p className="px-3 pb-2 text-center text-sm text-muted-foreground">{hebrewDate(date)}</p>}
         </div>
         <div>
           <Label className="block text-sm">בחרו שעת התחלה ואז שעת סיום</Label>
@@ -272,7 +273,10 @@ function StepTime(props: {
         </div>
         <motion.div key={price.total} initial={{ scale: 1.15 }} animate={{ scale: 1 }} className="font-display text-2xl font-bold text-primary">{formatILS(price.total)}</motion.div>
       </div>
-      <Nav onNext={props.onNext} disabled={!range} />
+      {!range && drinksTotal(props.cart, props.settings.drink_prices) > 0 && (
+        <p className="mt-4 text-center text-sm text-muted-foreground">לא נבחרו שעות — אפשר להמשיך ולהזמין רק את השתייה</p>
+      )}
+      <Nav onNext={props.onNext} disabled={!range && drinksTotal(props.cart, props.settings.drink_prices) <= 0} nextLabel={!range && drinksTotal(props.cart, props.settings.drink_prices) > 0 ? "המשך להזמנת שתייה" : "המשך"} />
     </div>
   );
 }
@@ -386,9 +390,9 @@ function StepPay({ range, hours, cart, settings, form, onBack, onPaid }: {
   );
 }
 
-function DrinksOnly({ settings, onClose }: { settings: Settings; onClose: () => void }) {
+function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; onClose: () => void; initialCart?: DrinkCart }) {
   const create = useServerFn(createDrinkOrder);
-  const [cart, setCart] = useState<DrinkCart>({});
+  const [cart, setCart] = useState<DrinkCart>(initialCart ?? {});
   const [name, setName] = useState(""); const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false); const [ok, setOk] = useState(false);
   const { setPay, modal } = usePayment(() => {
