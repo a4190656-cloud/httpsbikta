@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import {
-  Stethoscope, Palette, Laptop, Users, Sparkles, Trees, Home, ArrowLeft, ArrowRight,
+  Trees, Home, ArrowLeft, ArrowRight,
   Check, ShieldCheck, Clock, Loader2, CalendarDays, X, Minus, Plus, CupSoda,
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -18,8 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import logo from "@/assets/bikta-logo.png.asset.json";
 import {
-  DEFAULT_SETTINGS, DRINKS, PURPOSES, priceFor, drinksTotal, hoursLabel, formatILS, formatDateTime, formatTime,
-  type DrinkCart, type PurposeId, type Settings,
+  DEFAULT_SETTINGS, DRINKS, priceFor, drinksTotal, hoursLabel, formatILS, formatDateTime, formatTime,
+  type DrinkCart, type Settings,
 } from "@/lib/booking-rules";
 import { getBusy, createBooking, confirmPayment, createDrinkOrder, getSettings } from "@/lib/bookings.functions";
 
@@ -37,10 +37,7 @@ export const Route = createFileRoute("/")({
   component: BookingPage,
 });
 
-const ICONS: Record<PurposeId, typeof Stethoscope> = {
-  clinic: Stethoscope, studio: Palette, office: Laptop, meetings: Users, other: Sparkles,
-};
-const STEPS = ["מטרה", "מועד", "פרטים", "תשלום"];
+const STEPS = ["מועד", "פרטים", "תשלום"];
 const spring = { type: "spring" as const, stiffness: 400, damping: 25 };
 const fade = { h: { opacity: 0, y: 14 }, s: { opacity: 1, y: 0 } };
 
@@ -70,7 +67,6 @@ function BookingPage() {
   const settings = useSettings();
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
-  const [purpose, setPurpose] = useState<PurposeId | null>(null);
   const [date, setDate] = useState<Date | undefined>(() => new Date());
   const [range, setRange] = useState<Range>(null);
   const [cart, setCart] = useState<DrinkCart>({});
@@ -83,7 +79,7 @@ function BookingPage() {
   const price = priceFor(hours, settings.hourlyRate, drinksTotal(cart, settings.drinkPrices));
 
   if (done && range) {
-    return <Shell><Celebration token={done} startIso={range.start} hours={hours} purpose={purpose!} total={price.total} name={form.fullName} /></Shell>;
+    return <Shell><Celebration token={done} startIso={range.start} hours={hours} total={price.total} name={form.fullName} /></Shell>;
   }
 
   return (
@@ -115,15 +111,14 @@ function BookingPage() {
             <motion.div key={step} custom={dir}
               initial={{ opacity: 0, x: dir * -40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * 40 }}
               transition={{ duration: 0.28, ease: "easeOut" }}>
-              {step === 0 && <StepPurpose value={purpose} onChange={setPurpose} onNext={() => go(1)} />}
-              {step === 1 && (
+              {step === 0 && (
                 <StepTime date={date} setDate={(d) => { setDate(d); setRange(null); }} range={range} setRange={setRange}
-                  cart={cart} setCart={setCart} settings={settings} onBack={() => go(0)} onNext={() => go(2)} />
+                  cart={cart} setCart={setCart} settings={settings} onNext={() => go(1)} />
               )}
-              {step === 2 && <StepDetails form={form} setForm={setForm} onBack={() => go(1)} onNext={() => go(3)} />}
-              {step === 3 && range && (
-                <StepPay purpose={purpose!} range={range} hours={hours} cart={cart} settings={settings} form={form}
-                  onBack={() => go(2)} onPaid={setDone} />
+              {step === 1 && <StepDetails form={form} setForm={setForm} onBack={() => go(0)} onNext={() => go(2)} />}
+              {step === 2 && range && (
+                <StepPay range={range} hours={hours} cart={cart} settings={settings} form={form}
+                  onBack={() => go(1)} onPaid={setDone} />
               )}
             </motion.div>
           </AnimatePresence>
@@ -167,30 +162,6 @@ function Nav({ onBack, onNext, nextLabel = "המשך", disabled, loading }: { on
   );
 }
 
-function StepPurpose({ value, onChange, onNext }: { value: PurposeId | null; onChange: (p: PurposeId) => void; onNext: () => void }) {
-  return (
-    <div>
-      <h2 className="font-display text-2xl font-bold">לאיזו מטרה תשתמשו בבקתה?</h2>
-      <p className="mt-1 text-sm text-muted-foreground">בחרו את השימוש שמתאים לכם</p>
-      <motion.div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.06 } } }}>
-        {PURPOSES.map((p) => {
-          const I = ICONS[p.id]; const active = value === p.id;
-          return (
-            <motion.button key={p.id} variants={fade} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={spring}
-              onClick={() => onChange(p.id)}
-              className={`rounded-2xl border p-5 text-right transition-colors ${active ? "border-primary bg-primary text-primary-foreground shadow-organic" : "border-border bg-card hover:border-accent"}`}>
-              <I className={`h-6 w-6 ${active ? "" : "text-accent"}`} />
-              <div className="mt-3 font-semibold">{p.label}</div>
-              <div className={`mt-1 text-xs ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{p.desc}</div>
-            </motion.button>
-          );
-        })}
-      </motion.div>
-      <Nav onNext={onNext} disabled={!value} />
-    </div>
-  );
-}
-
 function dayStart(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
 
 function DrinkCounters({ cart, setCart, prices }: { cart: DrinkCart; setCart: (c: DrinkCart) => void; prices: Settings["drinkPrices"] }) {
@@ -222,7 +193,7 @@ function DrinkCounters({ cart, setCart, prices }: { cart: DrinkCart; setCart: (c
 
 function StepTime(props: {
   date: Date | undefined; setDate: (d?: Date) => void; range: Range; setRange: (r: Range) => void;
-  cart: DrinkCart; setCart: (c: DrinkCart) => void; settings: Settings; onBack: () => void; onNext: () => void;
+  cart: DrinkCart; setCart: (c: DrinkCart) => void; settings: Settings; onNext: () => void;
 }) {
   const { date, range, settings } = props;
   const fetchBusy = useServerFn(getBusy);
@@ -300,7 +271,7 @@ function StepTime(props: {
         </div>
         <motion.div key={price.total} initial={{ scale: 1.15 }} animate={{ scale: 1 }} className="font-display text-2xl font-bold text-primary">{formatILS(price.total)}</motion.div>
       </div>
-      <Nav onBack={props.onBack} onNext={props.onNext} disabled={!range} />
+      <Nav onNext={props.onNext} disabled={!range} />
     </div>
   );
 }
@@ -373,8 +344,8 @@ function usePayment(confirmToken: (t: string) => void) {
   return { setPay, modal };
 }
 
-function StepPay({ purpose, range, hours, cart, settings, form, onBack, onPaid }: {
-  purpose: PurposeId; range: { start: string; end: string }; hours: number; cart: DrinkCart; settings: Settings; form: Form;
+function StepPay({ range, hours, cart, settings, form, onBack, onPaid }: {
+  range: { start: string; end: string }; hours: number; cart: DrinkCart; settings: Settings; form: Form;
   onBack: () => void; onPaid: (token: string) => void;
 }) {
   const create = useServerFn(createBooking);
@@ -385,7 +356,7 @@ function StepPay({ purpose, range, hours, cart, settings, form, onBack, onPaid }
   const start = async () => {
     setLoading(true);
     try {
-      const r = await create({ data: { purpose, startsAt: range.start, endsAt: range.end, ...form, notes: form.notes || undefined, drinks: cart } });
+      const r = await create({ data: { startsAt: range.start, endsAt: range.end, ...form, notes: form.notes || undefined, drinks: cart } });
       setPay({ token: r.token, amount: r.total });
     } catch (err: any) { toast.error(err?.message ?? "לא הצלחנו ליצור הזמנה"); }
     finally { setLoading(false); }
@@ -398,7 +369,7 @@ function StepPay({ purpose, range, hours, cart, settings, form, onBack, onPaid }
         <ShieldCheck className="h-4 w-4" /> ביטול ללא עלות מתאפשר עד 2 ימי עסקים לפני המועד בלבד.
       </div>
       <div className="mt-6 rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays className="h-4 w-4" />{formatDateTime(range.start)}–{formatTime(range.end)} · {PURPOSES.find((x) => x.id === purpose)?.label}</div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays className="h-4 w-4" />{formatDateTime(range.start)}–{formatTime(range.end)} · {hoursLabel(hours)}</div>
         <dl className="mt-5 space-y-3 text-sm">
           <Row k={`${formatILS(settings.hourlyRate)} × ${hoursLabel(hours)}`} v={formatILS(p.room)} />
           {p.drinks > 0 && <Row k="שתייה" v={formatILS(p.drinks)} />}
@@ -465,7 +436,7 @@ function Row({ k, v }: { k: React.ReactNode; v: React.ReactNode }) {
   return <div className="flex items-center justify-between"><dt className="text-muted-foreground">{k}</dt><dd>{v}</dd></div>;
 }
 
-function Celebration({ token, startIso, hours, purpose, total, name }: { token: string; startIso: string; hours: number; purpose: PurposeId; total: number; name: string }) {
+function Celebration({ token, startIso, hours, total, name }: { token: string; startIso: string; hours: number; total: number; name: string }) {
   useEffect(() => {
     const colors = ["#2D4A32", "#8C502E", "#FAF7F2", "#C9A06B"];
     confetti({ particleCount: 140, spread: 90, origin: { y: 0.35 }, colors });
@@ -493,7 +464,6 @@ function Celebration({ token, startIso, hours, purpose, total, name }: { token: 
           <dl className="mt-5 space-y-2 text-sm">
             <Row k="מועד" v={formatDateTime(startIso)} />
             <Row k="משך" v={hoursLabel(hours)} />
-            <Row k="מטרה" v={PURPOSES.find((x) => x.id === purpose)?.label} />
             <Row k="שולם" v={formatILS(total)} />
           </dl>
           <p className="mt-4 text-xs text-muted-foreground">הוראות הגעה: החוזה מלובלין 18 — עולים קטע אחד של מדרגות, יוצאים מהבניין שמאלה, דלת ברזל. להוראות כניסה ופרטים נוספים פנו אלינו: <a href="tel:+972539000374" dir="ltr" className="text-accent underline">053-900-0374</a></p>
