@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import logo from "@/assets/bikta-logo.png.asset.json";
 import {
-  DEFAULT_SETTINGS, DRINKS, priceFor, drinksTotal, hoursLabel, formatILS, formatDateTime, formatTime,
+  DEFAULT_SETTINGS, DRINKS, priceFor, drinksTotal, hoursLabel, formatILS, formatDateTime, formatTime, hebrewDate,
   type DrinkCart, type Settings,
 } from "@/lib/booking-rules";
 import { getBusy, createBooking, confirmPayment, createDrinkOrder, getSettings } from "@/lib/bookings.functions";

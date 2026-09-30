@@ -91,3 +91,9 @@ export function formatDateTime(iso: string) {
 export function formatTime(iso: string) {
   return new Intl.DateTimeFormat("he-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 }
+/** Hebrew calendar date, e.g. "י״ד בתשרי תשפ״ז". */
+export function hebrewDate(iso: string | Date) {
+  return new Intl.DateTimeFormat("he-u-ca-hebrew", {
+    timeZone: "Asia/Jerusalem", day: "numeric", month: "long", year: "numeric",
+  }).format(new Date(iso));
+}
