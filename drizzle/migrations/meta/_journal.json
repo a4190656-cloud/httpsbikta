@@ -15,6 +15,13 @@
       "when": 1790776595877,
       "tag": "0001_drinks_settings_manual",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790786507932,
+      "tag": "0002_create_customer_reviews",
+      "breakpoints": true
     }
   ]
 }

@@ -122,6 +122,33 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_reviews: {
+        Row: {
+          created_at: string
+          id: string
+          is_visible: boolean
+          sort_order: number
+          storage_path: string
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          sort_order?: number
+          storage_path: string
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          sort_order?: number
+          storage_path?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           drink_prices: Json
