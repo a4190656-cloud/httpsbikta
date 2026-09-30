@@ -193,7 +193,7 @@ function DrinkCounters({ cart, setCart, prices }: { cart: DrinkCart; setCart: (c
 
 function StepTime(props: {
   date: Date | undefined; setDate: (d?: Date) => void; range: Range; setRange: (r: Range) => void;
-  cart: DrinkCart; setCart: (c: DrinkCart) => void; settings: Settings; onBack: () => void; onNext: () => void;
+  cart: DrinkCart; setCart: (c: DrinkCart) => void; settings: Settings; onNext: () => void;
 }) {
   const { date, range, settings } = props;
   const fetchBusy = useServerFn(getBusy);
@@ -271,7 +271,7 @@ function StepTime(props: {
         </div>
         <motion.div key={price.total} initial={{ scale: 1.15 }} animate={{ scale: 1 }} className="font-display text-2xl font-bold text-primary">{formatILS(price.total)}</motion.div>
       </div>
-      <Nav onBack={props.onBack} onNext={props.onNext} disabled={!range} />
+      <Nav onNext={props.onNext} disabled={!range} />
     </div>
   );
 }
@@ -344,8 +344,8 @@ function usePayment(confirmToken: (t: string) => void) {
   return { setPay, modal };
 }
 
-function StepPay({ purpose, range, hours, cart, settings, form, onBack, onPaid }: {
-  purpose: PurposeId; range: { start: string; end: string }; hours: number; cart: DrinkCart; settings: Settings; form: Form;
+function StepPay({ range, hours, cart, settings, form, onBack, onPaid }: {
+  range: { start: string; end: string }; hours: number; cart: DrinkCart; settings: Settings; form: Form;
   onBack: () => void; onPaid: (token: string) => void;
 }) {
   const create = useServerFn(createBooking);
@@ -356,7 +356,7 @@ function StepPay({ purpose, range, hours, cart, settings, form, onBack, onPaid }
   const start = async () => {
     setLoading(true);
     try {
-      const r = await create({ data: { purpose, startsAt: range.start, endsAt: range.end, ...form, notes: form.notes || undefined, drinks: cart } });
+      const r = await create({ data: { startsAt: range.start, endsAt: range.end, ...form, notes: form.notes || undefined, drinks: cart } });
       setPay({ token: r.token, amount: r.total });
     } catch (err: any) { toast.error(err?.message ?? "לא הצלחנו ליצור הזמנה"); }
     finally { setLoading(false); }
@@ -369,7 +369,7 @@ function StepPay({ purpose, range, hours, cart, settings, form, onBack, onPaid }
         <ShieldCheck className="h-4 w-4" /> ביטול ללא עלות מתאפשר עד 2 ימי עסקים לפני המועד בלבד.
       </div>
       <div className="mt-6 rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays className="h-4 w-4" />{formatDateTime(range.start)}–{formatTime(range.end)} · {PURPOSES.find((x) => x.id === purpose)?.label}</div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays className="h-4 w-4" />{formatDateTime(range.start)}–{formatTime(range.end)} · {hoursLabel(hours)}</div>
         <dl className="mt-5 space-y-3 text-sm">
           <Row k={`${formatILS(settings.hourlyRate)} × ${hoursLabel(hours)}`} v={formatILS(p.room)} />
           {p.drinks > 0 && <Row k="שתייה" v={formatILS(p.drinks)} />}
@@ -436,7 +436,7 @@ function Row({ k, v }: { k: React.ReactNode; v: React.ReactNode }) {
   return <div className="flex items-center justify-between"><dt className="text-muted-foreground">{k}</dt><dd>{v}</dd></div>;
 }
 
-function Celebration({ token, startIso, hours, purpose, total, name }: { token: string; startIso: string; hours: number; purpose: PurposeId; total: number; name: string }) {
+function Celebration({ token, startIso, hours, total, name }: { token: string; startIso: string; hours: number; total: number; name: string }) {
   useEffect(() => {
     const colors = ["#2D4A32", "#8C502E", "#FAF7F2", "#C9A06B"];
     confetti({ particleCount: 140, spread: 90, origin: { y: 0.35 }, colors });
@@ -464,7 +464,6 @@ function Celebration({ token, startIso, hours, purpose, total, name }: { token: 
           <dl className="mt-5 space-y-2 text-sm">
             <Row k="מועד" v={formatDateTime(startIso)} />
             <Row k="משך" v={hoursLabel(hours)} />
-            <Row k="מטרה" v={PURPOSES.find((x) => x.id === purpose)?.label} />
             <Row k="שולם" v={formatILS(total)} />
           </dl>
           <p className="mt-4 text-xs text-muted-foreground">הוראות הגעה: החוזה מלובלין 18 — עולים קטע אחד של מדרגות, יוצאים מהבניין שמאלה, דלת ברזל. להוראות כניסה ופרטים נוספים פנו אלינו: <a href="tel:+972539000374" dir="ltr" className="text-accent underline">053-900-0374</a></p>

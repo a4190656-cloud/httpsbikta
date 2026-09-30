@@ -48,7 +48,7 @@ const emailSchema = z.union([z.literal(""), z.string().trim().email().max(255)])
 const newToken = () => crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
 
 const bookingInput = z.object({
-  purpose: z.enum(PURPOSES.map((p) => p.id) as [string, ...string[]]),
+  purpose: z.enum(PURPOSES.map((p) => p.id) as [string, ...string[]]).optional(),
   startsAt: z.string().datetime({ offset: true }),
   endsAt: z.string().datetime({ offset: true }),
   fullName: z.string().trim().min(2).max(100),
@@ -76,7 +76,7 @@ export const createBooking = createServerFn({ method: "POST" })
     const p = priceFor(hours, s.hourlyRate, drinksTotal(cart, s.drinkPrices));
     const token = newToken();
     const { data: row, error } = await supabaseAdmin.from("bookings").insert({
-      purpose: data.purpose, starts_at: start.toISOString(), ends_at: end, hours: Math.ceil(hours), duration_hours: hours,
+      purpose: data.purpose ?? "other", starts_at: start.toISOString(), ends_at: end, hours: Math.ceil(hours), duration_hours: hours,
       full_name: data.fullName, phone: data.phone, email: data.email || "", attendees: data.attendees,
       notes: data.notes || null, subtotal: p.subtotal, vat: p.vat, total: p.total, manage_token: token,
       drinks: cart, drinks_total: p.drinks,
@@ -116,8 +116,9 @@ async function syncPaid(b: BookingRow) {
   if (b.kind === "booking") {
     const { gcalCreate } = await import("./gcal.server");
     const drinks = drinksText(b.drinks as DrinkCart);
+    const purposeSuffix = b.purpose && b.purpose !== "other" ? ` (${purposeLabel(b.purpose)})` : "";
     eventId = await gcalCreate({
-      summary: `השכרת בקתה B - ${b.full_name} (${purposeLabel(b.purpose)})`,
+      summary: `השכרת בקתה B - ${b.full_name}${purposeSuffix}`,
       description: `טלפון: ${b.phone}\n${b.email ? `אימייל: ${b.email}\n` : ""}משתתפים: ${b.attendees}\nמשך: ${b.duration_hours} שעות\n${drinks ? `שתייה: ${drinks}\n` : ""}סכום: ₪${b.total}\n${b.notes ? `הערות: ${b.notes}` : ""}`,
       start: b.starts_at, end: b.ends_at,
     });
