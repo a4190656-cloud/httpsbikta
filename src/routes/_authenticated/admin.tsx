@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatILS, formatTime, purposeLabel } from "@/lib/booking-rules";
 import { adminAddBlock, adminList, adminRemoveBlock, getAdminStatus } from "@/lib/bookings.functions";
-import { ManualBookingDialog, RevenuePanel, SettingsPanel } from "@/components/AdminPanels";
+import { ManualBookingDialog, RevenuePanel, ReviewsAdminPanel, SettingsPanel } from "@/components/AdminPanels";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "לוח ניהול — בקתה B" }, { name: "robots", content: "noindex" }] }),
@@ -119,6 +119,7 @@ function Admin() {
           }}><Lock className="h-4 w-4" /> חסימה</Button>
         </div>
       </div>
+      <ReviewsAdminPanel />
       <SettingsPanel />
     </Wrap>
   );

@@ -16,3 +16,4 @@
 - Google Calendar is accessed only from src/lib/gcal.server.ts via the connector gateway — single integration point.
 - Payment is TEST MODE: /checkout-test posts `{source:"takbull", type}` to the parent; swap for the real Takbull iframe + verified server callback when credentials exist.
 - First signed-in user auto-becomes admin (bootstrap in getAdminStatus) — owner setup without manual SQL.
+- Customer review screenshots use the private `customer-reviews` bucket and signed URLs; only admins manage metadata and files — public viewers never receive storage permissions.
