@@ -54,7 +54,7 @@ const bookingInput = z.object({
   fullName: z.string().trim().min(2).max(100),
   phone: phoneSchema,
   email: emailSchema,
-  attendees: z.number().int().min(1).max(40),
+  attendees: z.number().int().min(1).max(40).optional(),
   notes: z.string().trim().max(1000).optional(),
   drinks: cartSchema.optional(),
 });
@@ -77,7 +77,7 @@ export const createBooking = createServerFn({ method: "POST" })
     const token = newToken();
     const { data: row, error } = await supabaseAdmin.from("bookings").insert({
       purpose: data.purpose ?? "other", starts_at: start.toISOString(), ends_at: end, hours: Math.ceil(hours), duration_hours: hours,
-      full_name: data.fullName, phone: data.phone, email: data.email || "", attendees: data.attendees,
+      full_name: data.fullName, phone: data.phone, email: data.email || "", attendees: data.attendees ?? 1,
       notes: data.notes || null, subtotal: p.subtotal, vat: p.vat, total: p.total, manage_token: token,
       drinks: cart, drinks_total: p.drinks,
     }).select("id").single();
@@ -119,7 +119,7 @@ async function syncPaid(b: BookingRow) {
     const purposeSuffix = b.purpose && b.purpose !== "other" ? ` (${purposeLabel(b.purpose)})` : "";
     eventId = await gcalCreate({
       summary: `השכרת בקתה B - ${b.full_name}${purposeSuffix}`,
-      description: `טלפון: ${b.phone}\n${b.email ? `אימייל: ${b.email}\n` : ""}משתתפים: ${b.attendees}\nמשך: ${b.duration_hours} שעות\n${drinks ? `שתייה: ${drinks}\n` : ""}סכום: ₪${b.total}\n${b.notes ? `הערות: ${b.notes}` : ""}`,
+      description: `טלפון: ${b.phone}\n${b.email ? `אימייל: ${b.email}\n` : ""}משך: ${b.duration_hours} שעות\n${drinks ? `שתייה: ${drinks}\n` : ""}סכום: ₪${b.total}\n${b.notes ? `הערות: ${b.notes}` : ""}`,
       start: b.starts_at, end: b.ends_at,
     });
   }

@@ -7,7 +7,7 @@ import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import {
   Trees, Home, ArrowLeft, ArrowRight,
-  Check, ShieldCheck, Clock, Loader2, CalendarDays, X, Minus, Plus, CupSoda,
+  Check, ShieldCheck, Clock, Loader2, CalendarDays, X, Minus, Plus, CupSoda, MessageCircle,
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ const STEPS = ["מועד", "פרטים", "תשלום"];
 const spring = { type: "spring" as const, stiffness: 400, damping: 25 };
 const fade = { h: { opacity: 0, y: 14 }, s: { opacity: 1, y: 0 } };
 
-type Form = { fullName: string; phone: string; attendees: number; notes: string };
+type Form = { fullName: string; phone: string; notes: string };
 type Range = { start: string; end: string } | null;
 
 function useSettings(): Settings {
@@ -70,7 +70,7 @@ function BookingPage() {
   const [date, setDate] = useState<Date | undefined>(() => new Date());
   const [range, setRange] = useState<Range>(null);
   const [cart, setCart] = useState<DrinkCart>({});
-  const [form, setForm] = useState<Form>({ fullName: "", phone: "", attendees: 1, notes: "" });
+  const [form, setForm] = useState<Form>({ fullName: "", phone: "", notes: "" });
   const [done, setDone] = useState<string | null>(null);
   const [drinksOnly, setDrinksOnly] = useState(false);
 
@@ -96,10 +96,6 @@ function BookingPage() {
             {[[Home, "בקתה מאובזרת"], [Trees, "גינה פרטית"], [Clock, "24/6"], [ShieldCheck, "תשלום מאובטח"]].map(([I, t]: any) => (
               <motion.span variants={fade} key={t} className="glass inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-foreground"><I className="h-3.5 w-3.5 text-accent" />{t}</motion.span>
             ))}
-            <motion.button variants={fade} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} transition={spring} onClick={() => setDrinksOnly(true)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 font-medium text-accent-foreground">
-              <CupSoda className="h-3.5 w-3.5" /> כבר בבקתה? קנו שתייה
-            </motion.button>
           </motion.div>
         </motion.div>
       </section>
@@ -124,6 +120,7 @@ function BookingPage() {
           </AnimatePresence>
         </div>
       </motion.section>
+      <FloatingActions onDrinks={() => setDrinksOnly(true)} />
       <AnimatePresence>{drinksOnly && <DrinksOnly settings={settings} initialCart={range ? {} : cart} onClose={() => setDrinksOnly(false)} />}</AnimatePresence>
     </Shell>
   );
@@ -131,6 +128,25 @@ function BookingPage() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return <div className="min-h-screen bg-background bg-hero"><SiteHeader />{children}</div>;
+}
+
+function FloatingActions({ onDrinks }: { onDrinks: () => void }) {
+  return (
+    <>
+      <motion.div className="fixed bottom-5 right-3 z-30 sm:bottom-7 sm:right-6" animate={{ y: [0, -4, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}>
+        <Button asChild className="h-12 rounded-full px-4 shadow-organic sm:h-14 sm:px-5">
+          <a href="https://wa.me/972539000374" target="_blank" rel="noopener noreferrer" aria-label="יצירת קשר בוואטסאפ">
+            <MessageCircle className="h-5 w-5" /> <span>יצירת קשר</span>
+          </a>
+        </Button>
+      </motion.div>
+      <motion.div className="fixed bottom-5 left-3 z-30 sm:bottom-7 sm:left-6" animate={{ y: [0, -4, 0] }} transition={{ duration: 3.2, repeat: Infinity, delay: 0.45, ease: "easeInOut" }}>
+        <Button variant="secondary" className="h-12 rounded-full border border-accent/30 px-4 shadow-organic sm:h-14 sm:px-5" onClick={onDrinks}>
+          <CupSoda className="h-5 w-5 text-accent" /> <span>תשלום על שתייה</span>
+        </Button>
+      </motion.div>
+    </>
+  );
 }
 
 function Stepper({ step }: { step: number }) {
@@ -198,7 +214,6 @@ function StepTime(props: {
   const { date, range, settings } = props;
   const fetchBusy = useServerFn(getBusy);
   const from = date ? dayStart(date) : null;
-  const [anchor, setAnchor] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["busy", from?.toISOString()],
     enabled: !!from,
@@ -217,15 +232,20 @@ function StepTime(props: {
 
   const click = (idx: number) => {
     const s = slots[idx]!;
-    if (!anchor) { setAnchor(s.iso); props.setRange({ start: s.iso, end: s.end }); return; }
-    const a = slots.findIndex((x) => x.iso === anchor);
-    const [lo, hi] = a <= idx ? [a, idx] : [idx, a];
-    if (slots.slice(lo, hi + 1).some((x) => x.disabled)) {
-      toast("יש בטווח הזה שעות תפוסות — בחרו טווח רציף פנוי");
-      setAnchor(s.iso); props.setRange({ start: s.iso, end: s.end }); return;
+    if (!range) { props.setRange({ start: s.iso, end: s.end }); return; }
+    const first = slots.findIndex((x) => x.iso === range.start);
+    const last = slots.findIndex((x) => x.end === range.end);
+    const selected = idx >= first && idx <= last;
+    if (selected) {
+      if (first === last) { props.setRange(null); return; }
+      if (idx === first) { props.setRange({ start: slots[first + 1]!.iso, end: range.end }); return; }
+      if (idx === last) { props.setRange({ start: range.start, end: slots[last - 1]!.end }); return; }
+      toast("כדי לשמור על שעות רצופות, אפשר להסיר חצי שעה רק מקצה הבחירה");
+      return;
     }
-    props.setRange({ start: slots[lo]!.iso, end: slots[hi]!.end });
-    setAnchor(null);
+    if (idx === first - 1) { props.setRange({ start: s.iso, end: range.end }); return; }
+    if (idx === last + 1) { props.setRange({ start: range.start, end: s.end }); return; }
+    toast("בחרו חצאי שעה רצופים, אחד אחרי השני");
   };
   const inRange = (iso: string) => range && iso >= range.start && iso < range.end;
   const hours = range ? (new Date(range.end).getTime() - new Date(range.start).getTime()) / 3600_000 : 0;
@@ -236,12 +256,12 @@ function StepTime(props: {
       <h2 className="font-display text-2xl font-bold">מתי תרצו להגיע?</h2>
       <div className="mt-6 grid gap-6 md:grid-cols-[auto_1fr]">
         <div className="rounded-2xl border border-border bg-card p-2 self-start">
-          <Calendar locale={he} dir="rtl" mode="single" selected={date} onSelect={(d) => { props.setDate(d); setAnchor(null); }} disabled={(d) => d < dayStart(new Date())} className="p-3 pointer-events-auto" />
+          <Calendar locale={he} dir="rtl" mode="single" selected={date} onSelect={props.setDate} disabled={(d) => d < dayStart(new Date())} className="p-3 pointer-events-auto" />
           {date && <p className="px-3 pb-2 text-center text-sm text-muted-foreground">{hebrewDate(date)}</p>}
         </div>
         <div>
-          <Label className="block text-sm">בחרו שעת התחלה ואז שעת סיום</Label>
-          <p className="text-xs text-muted-foreground">{anchor ? "עכשיו לחצו על המשבצת האחרונה בטווח" : "כל משבצת = חצי שעה"}</p>
+          <Label className="block text-sm">בחרו את כל חצאי השעה הרצויים</Label>
+          <p className="text-xs text-muted-foreground">כל לחיצה מוסיפה חצי שעה רצופה · לחיצה נוספת מסירה אותה</p>
           {isLoading ? (
             <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> בודקים זמינות ביומן…</div>
           ) : (
@@ -268,7 +288,7 @@ function StepTime(props: {
 
       <div className="mt-6 flex items-center justify-between gap-4 rounded-2xl bg-secondary px-5 py-4">
         <div className="text-sm text-secondary-foreground">
-          {range ? <>{formatDateTime(range.start)}–{formatTime(range.end)} · {hoursLabel(hours)}</> : "בחרו טווח שעות"}
+          {range ? <>{formatDateTime(range.start)}–{formatTime(range.end)} · {hoursLabel(hours)} · נבחרו {hours * 2} חצאי שעה</> : "בחרו חצאי שעה"}
           {range && <div className="mt-0.5 text-xs text-secondary-foreground/70">{hebrewDate(range.start)}</div>}
         </div>
         <motion.div key={price.total} initial={{ scale: 1.15 }} animate={{ scale: 1 }} className="font-display text-2xl font-bold text-primary">{formatILS(price.total)}</motion.div>
@@ -293,7 +313,7 @@ function StepDetails({ form, setForm, onBack, onNext }: { form: Form; setForm: (
     fullName: form.fullName.trim().length < 2 ? "נא להזין שם מלא" : "",
     phone: !phoneRe.test(form.phone) ? "מספר טלפון ישראלי לא תקין" : "",
   };
-  const valid = !errors.fullName && !errors.phone && form.attendees >= 1;
+  const valid = !errors.fullName && !errors.phone;
   const set = (k: keyof Form, v: any) => setForm({ ...form, [k]: v });
   return (
     <div>
@@ -301,7 +321,6 @@ function StepDetails({ form, setForm, onBack, onNext }: { form: Form; setForm: (
       <motion.div className="mt-6 grid gap-4 sm:grid-cols-2" initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.05 } } }}>
         <motion.div variants={fade}><Field label="שם מלא" error={touched ? errors.fullName : ""}><Input value={form.fullName} maxLength={100} onChange={(e) => set("fullName", e.target.value)} /></Field></motion.div>
         <motion.div variants={fade}><Field label="טלפון" error={touched ? errors.phone : ""}><Input dir="ltr" inputMode="tel" placeholder="050-1234567" className="text-right" value={form.phone} onChange={(e) => set("phone", formatPhone(e.target.value))} /></Field></motion.div>
-        <motion.div variants={fade}><Field label="מספר משתתפים"><Input type="number" min={1} max={40} value={form.attendees} onChange={(e) => set("attendees", Math.max(1, Math.min(40, Number(e.target.value) || 1)))} /></Field></motion.div>
         <motion.div variants={fade} className="sm:col-span-2"><Field label="בקשות מיוחדות (לא חובה)"><Textarea rows={3} maxLength={1000} value={form.notes} onChange={(e) => set("notes", e.target.value)} /></Field></motion.div>
       </motion.div>
       <Nav onBack={onBack} onNext={() => { setTouched(true); if (valid) onNext(); }} />
