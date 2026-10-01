@@ -4,7 +4,7 @@ let installed = false;
 
 export function installBackendProxy() {
   if (installed || typeof window === "undefined") return;
-  const backend = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, "");
+  const backend = (import.meta.env['VITE_SUPABASE_URL'] as string | undefined)?.replace(/\/$/, "");
   if (!backend) return;
   installed = true;
   const original = window.fetch.bind(window);
