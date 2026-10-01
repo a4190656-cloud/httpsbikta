@@ -226,17 +226,14 @@ export function ReviewsAdminPanel() {
     if (!file.type.startsWith("image/")) { toast.error("אפשר להעלות קובץ תמונה בלבד"); return; }
     if (file.size > 8 * 1024 * 1024) { toast.error("התמונה גדולה מדי — עד 8MB"); return; }
     setUploading(true);
-    const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-    const path = `${crypto.randomUUID()}.${extension}`;
     try {
-      const { error: uploadError } = await supabase.storage.from("customer-reviews").upload(path, file, { contentType: file.type, upsert: false });
-      if (uploadError) throw uploadError;
-      try {
-        await add({ data: { storagePath: path, title: title.trim() || undefined } });
-      } catch (error) {
-        await supabase.storage.from("customer-reviews").remove([path]);
-        throw error;
-      }
+      const fileBase64 = await new Promise<string>((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result).split(",")[1] ?? "");
+        r.onerror = () => rej(new Error("קריאת הקובץ נכשלה"));
+        r.readAsDataURL(file);
+      });
+      await add({ data: { fileBase64, contentType: file.type, title: title.trim() || undefined } });
       setTitle("");
       toast.success("צילום התגובה נוסף לאתר");
       await refresh();
