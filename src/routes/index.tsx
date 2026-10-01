@@ -32,6 +32,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "שריון שעות בביקתה B" },
       { property: "og:description", content: "בקתה אווירתית עם גינה פרטית. בחרו מועד ושלמו אונליין תוך דקה. ₪40 לשעה, זמינה 24/6." },
       { property: "og:image", content: "https://httpsbikta.lovable.app/og-share.jpg" },
+      { property: "og:image:type", content: "image/jpeg" },
+      { property: "og:url", content: "https://httpsbikta.lovable.app/" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { property: "og:type", content: "website" },
