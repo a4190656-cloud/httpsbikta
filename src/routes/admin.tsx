@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -40,7 +41,7 @@ function Admin() {
     return { s, e };
   }, [anchor, view]);
 
-  const admin = useQuery({ queryKey: ["isAdmin"], queryFn: () => status() });
+  const admin = useQuery({ queryKey: ["isAdmin"], queryFn: () => status(), retry: false });
   const q = useQuery({
     queryKey: ["admin", range.s.toISOString(), view],
     enabled: !!admin.data?.isAdmin,
@@ -51,6 +52,9 @@ function Admin() {
   const sameDay = (iso: string, d: Date) => new Date(iso).toDateString() === d.toDateString();
   const shift = (n: number) => { const d = new Date(anchor); d.setDate(d.getDate() + n * (view === "week" ? 7 : 1)); setAnchor(d); };
 
+  const nav = useNavigate();
+  useEffect(() => { if (admin.isError) nav({ to: "/auth", replace: true }); }, [admin.isError, nav]);
+  if (admin.isError) return null;
   if (admin.data && !admin.data.isAdmin) return <Wrap><p className="text-muted-foreground">אין לחשבון זה הרשאות ניהול.</p></Wrap>;
 
   const bookings = (q.data?.bookings ?? []).filter((b: any) => filter.includes(b.status));
@@ -60,7 +64,7 @@ function Admin() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-3xl font-bold text-primary">לוח ניהול</h1>
         <div className="flex gap-2"><ManualBookingDialog />
-        <Button variant="ghost" onClick={() => supabase.auth.signOut().then(() => location.assign("/"))}><LogOut className="h-4 w-4" /> יציאה</Button></div>
+        <Button variant="ghost" onClick={async () => { await fetch("/api/admin-verify", { method: "DELETE" }).catch(() => {}); await supabase.auth.signOut().catch(() => {}); qc.clear(); location.assign("/"); }}><LogOut className="h-4 w-4" /> יציאה</Button></div>
       </div>
       <RevenuePanel />
 
