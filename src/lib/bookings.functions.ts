@@ -384,12 +384,23 @@ export const adminListReviews = createServerFn({ method: "POST" })
 
 export const adminAddReview = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
-  .inputValidator((d) => z.object({ storagePath: z.string().min(1).max(300), title: z.string().trim().max(120).optional() }).parse(d))
+  .inputValidator((d) => z.object({
+    fileBase64: z.string().min(1).max(11_500_000),
+    contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+    title: z.string().trim().max(120).optional(),
+  }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { count } = await context.supabase.from("customer_reviews").select("id", { count: "exact", head: true });
-    const { error } = await context.supabase.from("customer_reviews").insert({ storage_path: data.storagePath, title: data.title || null, sort_order: count ?? 0 });
-    if (error) throw new Error(error.message);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const bytes = Buffer.from(data.fileBase64, "base64");
+    if (bytes.length > 8 * 1024 * 1024) throw new Error("התמונה גדולה מדי — עד 8MB");
+    const ext = data.contentType.split("/")[1] === "jpeg" ? "jpg" : data.contentType.split("/")[1];
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await supabaseAdmin.storage.from("customer-reviews").upload(path, bytes, { contentType: data.contentType, upsert: false });
+    if (upErr) throw new Error(upErr.message);
+    const { count } = await supabaseAdmin.from("customer_reviews").select("id", { count: "exact", head: true });
+    const { error } = await supabaseAdmin.from("customer_reviews").insert({ storage_path: path, title: data.title || null, sort_order: count ?? 0 });
+    if (error) { await supabaseAdmin.storage.from("customer-reviews").remove([path]); throw new Error(error.message); }
     return { ok: true };
   });
 
