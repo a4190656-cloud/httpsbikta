@@ -313,7 +313,49 @@ export function LedgerPanel() {
         <span className="font-display text-2xl font-bold">{formatILS(data?.total ?? 0)}</span>
       </div>
       {isLoading ? <p className="mt-4 text-sm text-muted-foreground">טוען…</p> : (
-        <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card">
+        <div className="mt-4 space-y-3 md:hidden">
+          {rows.map((r: any, i: number) => {
+            const paid = r.status === "paid" || r.status === "invoiced";
+            return (
+              <article key={r.id} className="rounded-xl border border-border bg-card p-4">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-2"><span className="shrink-0 text-xs text-muted-foreground">#{i + 1}</span><h3 className="truncate font-semibold">{r.full_name}</h3></div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span>{jlm(r.starts_at)}</span>
+                      <span>{r.kind === "booking" ? `${formatTime(r.starts_at)}–${formatTime(r.ends_at)}` : "שתייה בלבד"}</span>
+                      <span dir="ltr">{r.phone}</span>
+                    </div>
+                  </div>
+                  <span className="shrink-0 font-display text-lg font-bold text-primary">{formatILS(Number(r.total))}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg bg-muted/60 p-2"><span className="text-muted-foreground">תשלום</span><div className="mt-0.5 font-medium">{r.payment_method}</div></div>
+                  <div className="rounded-lg bg-muted/60 p-2"><span className="text-muted-foreground">שתייה</span><div className="mt-0.5 truncate font-medium">{drinksText(r.drinks) || "—"}</div></div>
+                </div>
+                <div className="mt-3 grid gap-2">
+                  <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2"><Label className="text-xs">תאריך תשלום</Label><Input type="date" className="h-9 min-w-0 text-xs" value={r.paid_at ? ymd(r.paid_at) : ""} onChange={(e) => patch(r.id, { paidAt: e.target.value || null })} /></div>
+                  <select aria-label="סטטוס" value={r.status} onChange={(e) => patch(r.id, { status: e.target.value })} className={`h-9 w-full rounded-full border px-3 text-xs font-medium ${BADGE[r.status] ?? BADGE["cancelled"]}`}>
+                    {STATUSES.map((st) => <option key={st} value={st}>{STATUS_LABEL[st]}</option>)}
+                  </select>
+                </div>
+                <div className="mt-3 grid grid-cols-[1fr_1fr_auto_auto] items-center gap-2 border-t border-border pt-3">
+                  <label className="flex items-center gap-2 text-xs"><input type="checkbox" aria-label="שולם" className="h-4 w-4 accent-primary" checked={paid} onChange={(e) => patch(r.id, { paid: e.target.checked })} /> שולם</label>
+                  <label className="flex items-center gap-2 text-xs"><input type="checkbox" aria-label="קבלה" className="h-4 w-4 accent-primary" checked={!!r.receipt_issued} onChange={(e) => patch(r.id, { receipt: e.target.checked })} /> קבלה</label>
+                  <Button size="icon" variant="ghost" aria-label="עריכה" onClick={() => setEdit(r)}><Pencil className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" aria-label="מחיקה" onClick={async () => {
+                    if (!confirm("האם למחוק הזמנה זו?")) return;
+                    try { await del({ data: { id: r.id } }); toast.success("ההזמנה נמחקה והמועד שוחרר"); refresh(); } catch (e: any) { toast.error(e?.message ?? "מחיקה נכשלה"); }
+                  }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+              </article>
+            );
+          })}
+          {!rows.length && <p className="rounded-xl border border-border bg-card px-3 py-6 text-center text-muted-foreground">אין רשומות בחודש זה.</p>}
+        </div>
+      )}
+      {!isLoading && (
+        <div className="mt-4 hidden overflow-x-auto rounded-xl border border-border bg-card md:block">
           <table className="w-full min-w-[980px] text-sm">
             <thead className="bg-muted/60 text-xs text-muted-foreground">
               <tr>{["#", "תאריך", "שם ומשפחה", "שעות", "שתייה", "אמצעי תשלום", "תאריך תשלום", "סכום", "שולם", "קבלה", "סטטוס", "פעולות"].map((h) => <th key={h} className="px-2 py-2 text-right font-medium">{h}</th>)}</tr>

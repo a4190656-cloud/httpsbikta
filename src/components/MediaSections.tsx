@@ -38,13 +38,15 @@ export function ReviewsSection() {
           <p className="mt-2 text-sm text-muted-foreground">מילים אמיתיות מאנשים שכבר התארחו בבקתה</p>
         </motion.div>
         {isLoading ? (
-          <div className="mx-auto mt-8 h-56 max-w-sm animate-pulse rounded-2xl bg-muted" />
+          <div className="mx-auto mt-8 aspect-[4/5] w-[78vw] max-w-sm animate-pulse rounded-2xl bg-muted" />
         ) : reviews.length ? (
-          <div className="mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4">
+          <div className="-mx-5 mt-8 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-4 sm:mx-0 sm:gap-4 sm:px-0">
             {reviews.map((review, index) => (
               <motion.figure key={review.id} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }}
-                className="w-[82vw] max-w-sm shrink-0 snap-center overflow-hidden rounded-2xl border border-border bg-card shadow-organic">
-                <img src={review.imageUrl} alt={review.title || "צילום מסך של תגובת לקוח"} loading="lazy" className="h-auto max-h-[34rem] w-full object-contain" />
+                className="w-[78vw] max-w-sm shrink-0 snap-center overflow-hidden rounded-2xl border border-border bg-card shadow-organic">
+                <div className="flex min-h-64 items-center justify-center bg-card sm:min-h-72">
+                  <img src={review.imageUrl} alt={review.title || "צילום מסך של תגובת לקוח"} loading={index === 0 ? "eager" : "lazy"} className="block h-auto max-h-[32rem] w-full object-contain" />
+                </div>
                 {review.title && <figcaption className="border-t border-border px-4 py-3 text-sm font-medium">{review.title}</figcaption>}
               </motion.figure>
             ))}

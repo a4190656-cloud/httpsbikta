@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import {
-  Trees, Home, ArrowLeft, ArrowRight,
+  Trees, Home, ArrowLeft, ArrowRight, UsersRound,
   Check, ShieldCheck, Clock, Loader2, CalendarDays, X, Minus, Plus, CupSoda, MessageCircle, MessageSquareQuote,
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -114,6 +114,14 @@ function BookingPage() {
           <motion.p variants={fade} transition={{ delay: 1.3 }} className="mx-auto mt-4 max-w-xl text-muted-foreground">
             {formatILS(settings.hourlyRate)} לשעה, כולל מע״מ. הזמנה בקפיצות של חצי שעה.
           </motion.p>
+          <motion.div variants={fade} transition={{ delay: 1.38 }} className="mx-auto mt-4 max-w-xl rounded-2xl border border-accent/25 bg-accent/10 px-4 py-3 text-sm text-foreground">
+            <div className="flex items-center justify-center gap-2 font-semibold">
+              <UsersRound className="h-4 w-4 shrink-0 text-accent" />
+              <span>מתכננים פעילות קבוצתית?</span>
+            </div>
+            <p className="mt-1 text-muted-foreground">לקבוצות ולשימושים מיוחדים מותאם מחיר אישי.</p>
+            <a href="https://wa.me/972539000374?text=%D7%A9%D7%9C%D7%95%D7%9D%2C%20%D7%90%D7%A9%D7%9E%D7%97%20%D7%9C%D7%A7%D7%91%D7%9C%20%D7%94%D7%A6%D7%A2%D7%AA%20%D7%9E%D7%97%D7%99%D7%A8%20%D7%9C%D7%A7%D7%91%D7%95%D7%A6%D7%94%20%D7%91%D7%91%D7%A7%D7%AA%D7%94%20B" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex font-semibold text-accent underline underline-offset-4">צרו איתנו קשר לקבלת הצעה</a>
+          </motion.div>
           <motion.div className="mt-5 flex flex-wrap justify-center gap-2 text-xs" initial="h" animate="s"
             variants={{ s: { transition: { staggerChildren: 0.08, delayChildren: 1.4 } } }}>
             {[[Home, "בקתה מאובזרת"], [Trees, "גינה פרטית"], [Clock, "24/6"], [ShieldCheck, "תשלום מאובטח"]].map(([I, t]: any) => (
@@ -569,7 +577,7 @@ function Celebration({ token, startIso, hours, total, name }: { token: string; s
 function OfflineConfirm({ token, range, method, total, name }: { token: string; range: { start: string; end: string }; method: PayMethod; total: number; name: string }) {
   useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); }, []);
   const dateStr = new Date(range.start).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
-  const msg = `שלום, ביצעתי הרגע הזמנה בבקתה B עבור ${name} בתאריך ${dateStr} בין השעות ${formatTime(range.start)}-${formatTime(range.end)}. בחרתי לשלם באמצעות ${PAY_METHOD_LABEL[method]}. אשמח לקבל פרטים לביצוע ההעברה / לשלוח אסמכתה. תודה!`;
+  const msg = `שלום, ביצעתי הרגע הזמנה בבקתה B עבור ${name} בתאריך ${dateStr} בין השעות ${formatTime(range.start)}-${formatTime(range.end)}. הסכום לתשלום הוא ${formatILS(total)} ובחרתי לשלם באמצעות ${PAY_METHOD_LABEL[method]}. אשמח לקבל פרטים לביצוע ההעברה / לשלוח אסמכתה. תודה!`;
   const wa = `https://wa.me/972539000374?text=${encodeURIComponent(msg)}`;
   return (
     <section className="mx-auto max-w-xl px-5 py-14 text-center">
