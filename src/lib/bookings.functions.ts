@@ -458,7 +458,7 @@ export const adminUpdateBooking = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: b } = await supabaseAdmin.from("bookings").select("*").eq("id", data.id).single();
     if (!b) throw new Error("ההזמנה לא נמצאה");
-    const patch: Record<string, unknown> = {};
+    const patch: any = {};
     if (data.status) patch.status = data.status;
     if (data.paid === true) { patch.status = b.receipt_issued ? "invoiced" : "paid"; patch.paid_at = b.paid_at ?? new Date().toISOString(); }
     if (data.paid === false) { patch.status = "pending"; patch.paid_at = null; }

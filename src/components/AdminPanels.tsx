@@ -338,7 +338,7 @@ export function LedgerPanel() {
                     <td className="px-2 py-2 text-center"><input type="checkbox" aria-label="קבלה" className="h-4 w-4 accent-primary" checked={!!r.receipt_issued} onChange={(e) => patch(r.id, { receipt: e.target.checked })} /></td>
                     <td className="px-2 py-2">
                       <select aria-label="סטטוס" value={r.status} onChange={(e) => patch(r.id, { status: e.target.value })}
-                        className={`h-8 rounded-full border px-2 text-xs font-medium ${BADGE[r.status] ?? BADGE.cancelled}`}>
+                        className={`h-8 rounded-full border px-2 text-xs font-medium ${BADGE[r.status] ?? BADGE["cancelled"]}`}>
                         {STATUSES.map((st) => <option key={st} value={st}>{STATUS_LABEL[st]}</option>)}
                       </select>
                     </td>
