@@ -415,9 +415,21 @@ function StepPay({ range, hours, cart, settings, form, onBack, onPaid }: {
           <div className="border-t border-border pt-3"><Row k={<b>סה״כ לתשלום</b>} v={<b className="font-display text-2xl text-primary">{formatILS(p.total)}</b>} /></div>
         </dl>
       </div>
+      <Consent />
       <Nav onBack={onBack} onNext={start} nextLabel="לתשלום מאובטח" loading={loading} />
       {modal}
     </div>
+  );
+}
+
+function Consent() {
+  const l = "font-medium text-primary underline underline-offset-2";
+  return (
+    <p className="mt-4 text-center text-xs text-muted-foreground">
+      בלחיצה על ביצוע תשלום, הנך מאשר/ת את{" "}
+      <a href="/terms" target="_blank" rel="noopener" className={l}>תנאי השימוש</a> ו
+      <a href="/cancellation" target="_blank" rel="noopener" className={l}>מדיניות הביטולים</a>
+    </p>
   );
 }
 
@@ -458,7 +470,8 @@ function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; on
               <Field label="שם"><Input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} /></Field>
               <Field label="טלפון"><Input dir="ltr" inputMode="tel" className="text-right" placeholder="050-1234567" value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} /></Field>
             </div>
-            <Button size="lg" className="mt-5 h-12 w-full rounded-full text-base" disabled={!total || loading} onClick={submit}>
+            <Consent />
+            <Button size="lg" className="mt-3 h-12 w-full rounded-full text-base" disabled={!total || loading} onClick={submit}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />} לתשלום {formatILS(total)}
             </Button>
           </>

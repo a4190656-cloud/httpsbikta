@@ -11,8 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AccessibilityRouteImport } from './routes/accessibility'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CancellationRouteImport } from './routes/cancellation'
 import { Route as CheckoutTestRouteImport } from './routes/checkout-test'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as ManageTokenRouteImport } from './routes/manage.$token'
 import { Route as ApiPublicGalleryFileIdRouteImport } from './routes/api/public/gallery.$fileId'
@@ -26,14 +30,34 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccessibilityRoute = AccessibilityRouteImport.update({
+  id: '/accessibility',
+  path: '/accessibility',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CancellationRoute = CancellationRouteImport.update({
+  id: '/cancellation',
+  path: '/cancellation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutTestRoute = CheckoutTestRouteImport.update({
   id: '/checkout-test',
   path: '/checkout-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -54,16 +78,24 @@ const ApiPublicGalleryFileIdRoute = ApiPublicGalleryFileIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/accessibility': typeof AccessibilityRoute
   '/auth': typeof AuthRoute
+  '/cancellation': typeof CancellationRoute
   '/checkout-test': typeof CheckoutTestRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/manage/$token': typeof ManageTokenRoute
   '/api/public/gallery/$fileId': typeof ApiPublicGalleryFileIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/accessibility': typeof AccessibilityRoute
   '/auth': typeof AuthRoute
+  '/cancellation': typeof CancellationRoute
   '/checkout-test': typeof CheckoutTestRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/manage/$token': typeof ManageTokenRoute
   '/api/public/gallery/$fileId': typeof ApiPublicGalleryFileIdRoute
@@ -72,8 +104,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/accessibility': typeof AccessibilityRoute
   '/auth': typeof AuthRoute
+  '/cancellation': typeof CancellationRoute
   '/checkout-test': typeof CheckoutTestRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/manage/$token': typeof ManageTokenRoute
   '/api/public/gallery/$fileId': typeof ApiPublicGalleryFileIdRoute
@@ -82,16 +118,24 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/accessibility'
     | '/auth'
+    | '/cancellation'
     | '/checkout-test'
+    | '/privacy'
+    | '/terms'
     | '/admin'
     | '/manage/$token'
     | '/api/public/gallery/$fileId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/accessibility'
     | '/auth'
+    | '/cancellation'
     | '/checkout-test'
+    | '/privacy'
+    | '/terms'
     | '/admin'
     | '/manage/$token'
     | '/api/public/gallery/$fileId'
@@ -99,8 +143,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/accessibility'
     | '/auth'
+    | '/cancellation'
     | '/checkout-test'
+    | '/privacy'
+    | '/terms'
     | '/_authenticated/admin'
     | '/manage/$token'
     | '/api/public/gallery/$fileId'
@@ -109,8 +157,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AccessibilityRoute: typeof AccessibilityRoute
   AuthRoute: typeof AuthRoute
+  CancellationRoute: typeof CancellationRoute
   CheckoutTestRoute: typeof CheckoutTestRoute
+  PrivacyRoute: typeof PrivacyRoute
+  TermsRoute: typeof TermsRoute
   ManageTokenRoute: typeof ManageTokenRoute
   ApiPublicGalleryFileIdRoute: typeof ApiPublicGalleryFileIdRoute
 }
@@ -131,6 +183,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accessibility': {
+      id: '/accessibility'
+      path: '/accessibility'
+      fullPath: '/accessibility'
+      preLoaderRoute: typeof AccessibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -138,11 +197,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cancellation': {
+      id: '/cancellation'
+      path: '/cancellation'
+      fullPath: '/cancellation'
+      preLoaderRoute: typeof CancellationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout-test': {
       id: '/checkout-test'
       path: '/checkout-test'
       fullPath: '/checkout-test'
       preLoaderRoute: typeof CheckoutTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin': {
@@ -183,8 +263,12 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AccessibilityRoute: AccessibilityRoute,
   AuthRoute: AuthRoute,
+  CancellationRoute: CancellationRoute,
   CheckoutTestRoute: CheckoutTestRoute,
+  PrivacyRoute: PrivacyRoute,
+  TermsRoute: TermsRoute,
   ManageTokenRoute: ManageTokenRoute,
   ApiPublicGalleryFileIdRoute: ApiPublicGalleryFileIdRoute,
 }
