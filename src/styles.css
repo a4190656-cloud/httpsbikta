@@ -122,3 +122,8 @@
 @utility bg-hero {
   background-image: var(--gradient-hero);
 }
+
+/* Accessibility toolbar modes */
+html.a11y-contrast body { filter: contrast(1.35) grayscale(1); }
+html.a11y-links a { text-decoration: underline !important; outline: 2px solid var(--color-accent); outline-offset: 2px; }
+html.a11y-readable body, html.a11y-readable body * { font-family: Arial, "Helvetica Neue", sans-serif !important; letter-spacing: 0.02em; }
