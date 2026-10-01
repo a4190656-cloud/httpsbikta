@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAdmin } from "./admin-auth";
 import {
   canCancel, DEFAULT_SETTINGS, DRINKS, drinksText, drinksTotal, priceFor, purposeLabel, PURPOSES,
   splitVat, type DrinkCart, type Settings,
@@ -188,28 +188,30 @@ export const cancelBooking = createServerFn({ method: "POST" })
   });
 
 // ---------- Admin ----------
-async function assertAdmin(ctx: { supabase: any; userId: string }) {
+async function assertAdmin(ctx: { supabase: any; userId: string | null; pin: boolean }) {
+  if (ctx.pin) return;
   const { data } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
   if (!data) throw new Error("Forbidden");
 }
 
 export const getAdminStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .handler(async ({ context }) => {
+    if (context.pin) return { isAdmin: true };
     const { data } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (data) return { isAdmin: true };
     // Bootstrap: the very first signed-in user becomes the owner/admin.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { count } = await supabaseAdmin.from("user_roles").select("id", { count: "exact", head: true }).eq("role", "admin");
     if ((count ?? 0) === 0) {
-      await supabaseAdmin.from("user_roles").insert({ user_id: context.userId, role: "admin" });
+      await supabaseAdmin.from("user_roles").insert({ user_id: context.userId!, role: "admin" });
       return { isAdmin: true };
     }
     return { isAdmin: false };
   });
 
 export const adminList = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((d) => z.object({ from: z.string(), to: z.string() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -222,7 +224,7 @@ export const adminList = createServerFn({ method: "POST" })
   });
 
 export const adminAddBlock = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((d) => z.object({ startsAt: z.string(), endsAt: z.string(), reason: z.string().max(100) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -232,7 +234,7 @@ export const adminAddBlock = createServerFn({ method: "POST" })
   });
 
 export const adminRemoveBlock = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -241,7 +243,7 @@ export const adminRemoveBlock = createServerFn({ method: "POST" })
   });
 
 export const adminCreateManual = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((d) => z.object({
     fullName: z.string().trim().min(1).max(100),
     phone: z.string().trim().max(20),
@@ -280,7 +282,7 @@ export const adminCreateManual = createServerFn({ method: "POST" })
   });
 
 export const adminSaveSettings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((d) => z.object({
     hourlyRate: z.number().min(0).max(10000),
     drinkPrices: z.object(Object.fromEntries(DRINKS.map((x) => [x.id, z.number().min(0).max(1000)]))),
@@ -294,7 +296,7 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
   });
 
 export const adminRevenue = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const from = new Date(); from.setDate(1); from.setHours(0, 0, 0, 0); from.setMonth(from.getMonth() - 5);
@@ -319,7 +321,7 @@ export const adminRevenue = createServerFn({ method: "POST" })
   });
 
 export const adminAddTransaction = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((d) => z.object({
     type: z.enum(["income", "expense"]), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     description: z.string().trim().min(1).max(120), amount: z.number().positive().max(1_000_000),
@@ -339,7 +341,7 @@ export const adminAddTransaction = createServerFn({ method: "POST" })
   });
 
 export const adminListReviews = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { data, error } = await context.supabase.from("customer_reviews").select("id, storage_path, title, is_visible, sort_order, created_at")
@@ -349,7 +351,7 @@ export const adminListReviews = createServerFn({ method: "POST" })
   });
 
 export const adminAddReview = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((d) => z.object({ storagePath: z.string().min(1).max(300), title: z.string().trim().max(120).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -360,7 +362,7 @@ export const adminAddReview = createServerFn({ method: "POST" })
   });
 
 export const adminUpdateReview = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((d) => z.object({ id: z.string().uuid(), isVisible: z.boolean(), sortOrder: z.number().int().min(0).max(999) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -370,7 +372,7 @@ export const adminUpdateReview = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteReview = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);

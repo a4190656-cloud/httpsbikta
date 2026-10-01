@@ -12,7 +12,8 @@ import { formatILS, formatTime, purposeLabel } from "@/lib/booking-rules";
 import { adminAddBlock, adminList, adminRemoveBlock, getAdminStatus } from "@/lib/bookings.functions";
 import { ManualBookingDialog, RevenuePanel, ReviewsAdminPanel, SettingsPanel } from "@/components/AdminPanels";
 
-export const Route = createFileRoute("/_authenticated/admin")({
+export const Route = createFileRoute("/admin")({
+  ssr: false,
   head: () => ({ meta: [{ title: "לוח ניהול — בקתה B" }, { name: "robots", content: "noindex" }] }),
   component: Admin,
 });
