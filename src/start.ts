@@ -10,6 +10,11 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
     if (error != null && typeof error === "object" && "statusCode" in error) {
       throw error;
     }
+    // The visitor closed the page / scrolled away mid-request — not a real failure.
+    const msg = error instanceof Error ? `${error.name} ${error.message}` : String(error);
+    if (/abort/i.test(msg)) {
+      return new Response(null, { status: 499 });
+    }
     console.error(error);
     return new Response(renderErrorPage(), {
       status: 500,
