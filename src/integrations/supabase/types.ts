@@ -59,6 +59,9 @@ export type Database = {
           payment_method: string
           phone: string
           purpose: string
+          receipt_issued: boolean
+          sheet_row: number | null
+          sheet_tab: string | null
           source: string
           starts_at: string
           status: string
@@ -86,6 +89,9 @@ export type Database = {
           payment_method?: string
           phone: string
           purpose: string
+          receipt_issued?: boolean
+          sheet_row?: number | null
+          sheet_tab?: string | null
           source?: string
           starts_at: string
           status?: string
@@ -113,6 +119,9 @@ export type Database = {
           payment_method?: string
           phone?: string
           purpose?: string
+          receipt_issued?: boolean
+          sheet_row?: number | null
+          sheet_tab?: string | null
           source?: string
           starts_at?: string
           status?: string
