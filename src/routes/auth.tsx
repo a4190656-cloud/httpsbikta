@@ -19,6 +19,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [netError, setNetError] = useState(false);
+  const [pinMode, setPinMode] = useState(false);
   const attempt = () => mode === "in"
     ? supabase.auth.signInWithPassword({ email, password })
     : supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/admin` } });
@@ -40,6 +41,7 @@ function AuthPage() {
     if (error) { toast.error(error.message === "Invalid login credentials" ? "אימייל או סיסמה שגויים" : error.message); return; }
     if (data.session) nav({ to: "/admin" }); else toast.success("נשלח אליכם מייל לאימות החשבון");
   };
+  if (pinMode) return <PinLogin onBack={() => setPinMode(false)} />;
   return (
     <div className="min-h-screen bg-background bg-hero">
       <SiteHeader />
@@ -50,14 +52,45 @@ function AuthPage() {
         {netError && (
           <div role="alert" className="space-y-2 rounded-2xl border border-destructive/30 bg-destructive/5 p-3 text-sm">
             <p className="font-semibold text-destructive">לא הצלחנו להתחבר לשרת</p>
-            <p className="text-muted-foreground">ייתכן שחיבור האינטרנט חלש, או ש-VPN / סינון אינטרנט חוסם את הגישה. נסו לכבות אותם לרגע או לעבור בין Wi‑Fi לנתונים סלולריים.</p>
+            <p className="text-muted-foreground">ייתכן שחיבור האינטרנט חלש, או ש-VPN / סינון אינטרנט חוסם את הגישה. נסו לכבות אותם לרגע, או היכנסו עם קוד מנהל מהיר.</p>
             <Button type="button" variant="outline" size="sm" onClick={() => submit()} disabled={loading}>נסו שוב</Button>
           </div>
         )}
         <Button className="w-full" disabled={loading}>{loading ? "מתחבר…" : mode === "in" ? "כניסה" : "הרשמה"}</Button>
+        <Button type="button" variant="outline" className="w-full" onClick={() => setPinMode(true)}><KeyRound className="h-4 w-4" /> כניסה באמצעות קוד מנהל מהיר</Button>
         <button type="button" className="w-full text-sm text-accent" onClick={() => setMode(mode === "in" ? "up" : "in")}>
           {mode === "in" ? "אין חשבון? הרשמה" : "יש חשבון? כניסה"}
         </button>
+      </form>
+    </div>
+  );
+}
+
+function PinLogin({ onBack }: { onBack: () => void }) {
+  const nav = useNavigate();
+  const [pin, setPin] = useState("");
+  const [loading, setLoading] = useState(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); setLoading(true);
+    try {
+      const res = await fetch("/api/admin-verify", {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+        body: JSON.stringify({ pin }),
+      });
+      if (res.ok) { nav({ to: "/admin" }); return; }
+      toast.error(res.status === 503 ? "קוד המנהל עדיין לא הוגדר" : "קוד שגוי");
+    } catch {
+      toast.error("אין חיבור לשרת. בדקו את האינטרנט ונסו שוב.");
+    } finally { setLoading(false); }
+  };
+  return (
+    <div className="min-h-screen bg-background bg-hero">
+      <SiteHeader />
+      <form onSubmit={submit} className="glass mx-auto mt-16 max-w-sm space-y-4 rounded-3xl p-8">
+        <h1 className="font-display text-2xl font-bold text-primary">כניסה באמצעות קוד מנהל מהיר</h1>
+        <div className="space-y-1.5"><Label>קוד מנהל</Label><Input dir="ltr" type="password" autoComplete="current-password" required value={pin} onChange={(e) => setPin(e.target.value)} /></div>
+        <Button className="w-full" disabled={loading}>{loading ? "בודק…" : "כניסה"}</Button>
+        <button type="button" className="w-full text-sm text-accent" onClick={onBack}>חזרה לכניסה עם אימייל</button>
       </form>
     </div>
   );
