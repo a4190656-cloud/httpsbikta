@@ -91,7 +91,7 @@ function BookingPage() {
   const price = priceFor(hours, settings.hourlyRate, drinksTotal(cart, settings.drinkPrices));
 
   if (done && range) {
-    return <Shell><Celebration token={done} startIso={range.start} hours={hours} total={price.total} name={form.fullName} /></Shell>;
+    return <Shell><Celebration token={done} startIso={range.start} hours={hours} total={price.total} name={form.fullName} /><ReviewsSection /><PhotoGallery /></Shell>;
   }
 
   return (
