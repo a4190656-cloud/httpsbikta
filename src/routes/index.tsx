@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import logo from "@/assets/bikta-logo.png.asset.json";
 import {
   DEFAULT_SETTINGS, DRINKS, priceFor, drinksTotal, hoursLabel, formatILS, formatDateTime, formatTime, hebrewDate,
-  type DrinkCart, type Settings,
+  type DrinkCart, type Settings, PAY_METHODS, PAY_METHOD_LABEL, type PayMethod,
 } from "@/lib/booking-rules";
 import { getBusy, createBooking, confirmPayment, createDrinkOrder, getSettings } from "@/lib/bookings.functions";
 
@@ -79,6 +79,7 @@ function BookingPage() {
   const [cart, setCart] = useState<DrinkCart>({});
   const [form, setForm] = useState<Form>({ fullName: "", phone: "", notes: "" });
   const [done, setDone] = useState<string | null>(null);
+  const [offline, setOffline] = useState<PayMethod | null>(null);
   const [drinksOnly, setDrinksOnly] = useState(false);
 
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); };
@@ -90,6 +91,9 @@ function BookingPage() {
   const hours = range ? (new Date(range.end).getTime() - new Date(range.start).getTime()) / 3600_000 : 0;
   const price = priceFor(hours, settings.hourlyRate, drinksTotal(cart, settings.drinkPrices));
 
+  if (done && range && offline) {
+    return <Shell><OfflineConfirm token={done} range={range} method={offline} total={price.total} name={form.fullName} /><ReviewsSection /><PhotoGallery /></Shell>;
+  }
   if (done && range) {
     return <Shell><Celebration token={done} startIso={range.start} hours={hours} total={price.total} name={form.fullName} /><ReviewsSection /><PhotoGallery /></Shell>;
   }
@@ -131,7 +135,7 @@ function BookingPage() {
               {step === 1 && <StepDetails form={form} setForm={setForm} onBack={() => go(0)} onNext={() => go(2)} />}
               {step === 2 && range && (
                 <StepPay range={range} hours={hours} cart={cart} settings={settings} form={form}
-                  onBack={() => go(1)} onPaid={setDone} />
+                  onBack={() => go(1)} onPaid={setDone} onOffline={(t, m) => { setOffline(m); setDone(t); }} />
               )}
             </motion.div>
           </AnimatePresence>
@@ -389,20 +393,22 @@ function usePayment(confirmToken: (t: string) => void) {
   return { setPay, modal };
 }
 
-function StepPay({ range, hours, cart, settings, form, onBack, onPaid }: {
+function StepPay({ range, hours, cart, settings, form, onBack, onPaid, onOffline }: {
   range: { start: string; end: string }; hours: number; cart: DrinkCart; settings: Settings; form: Form;
-  onBack: () => void; onPaid: (token: string) => void;
+  onBack: () => void; onPaid: (token: string) => void; onOffline: (token: string, method: PayMethod) => void;
 }) {
   const create = useServerFn(createBooking);
   const [loading, setLoading] = useState(false);
+  const [method, setMethod] = useState<PayMethod>("אשראי");
   const { setPay, modal } = usePayment(onPaid);
   const p = priceFor(hours, settings.hourlyRate, drinksTotal(cart, settings.drinkPrices));
 
   const start = async () => {
     setLoading(true);
     try {
-      const r = await create({ data: { startsAt: range.start, endsAt: range.end, ...form, notes: form.notes || undefined, drinks: cart } });
-      setPay({ token: r.token, amount: r.total });
+      const r = await create({ data: { startsAt: range.start, endsAt: range.end, ...form, notes: form.notes || undefined, drinks: cart, paymentMethod: method } });
+      if (method === "אשראי") setPay({ token: r.token, amount: r.total });
+      else onOffline(r.token, method);
     } catch (err: any) { toast.error(err?.message ?? "לא הצלחנו ליצור הזמנה"); }
     finally { setLoading(false); }
   };
@@ -426,8 +432,21 @@ function StepPay({ range, hours, cart, settings, form, onBack, onPaid }: {
           <div className="border-t border-border pt-3"><Row k={<b>סה״כ לתשלום</b>} v={<b className="font-display text-2xl text-primary">{formatILS(p.total)}</b>} /></div>
         </dl>
       </div>
+      <div className="mt-6">
+        <div className="mb-2 text-sm font-semibold">אמצעי תשלום</div>
+        <div role="radiogroup" aria-label="אמצעי תשלום" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {PAY_METHODS.map((m) => (
+            <motion.button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)}
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              className={`rounded-2xl border px-3 py-3 text-sm font-medium transition-colors ${method === m ? "border-primary bg-primary text-primary-foreground shadow-organic" : "border-border bg-card hover:border-primary/40"}`}>
+              {PAY_METHOD_LABEL[m]}
+            </motion.button>
+          ))}
+        </div>
+        {method !== "אשראי" && <p className="mt-2 text-xs text-muted-foreground">המועד יינעל עבורכם, ואישור סופי יינתן אחרי שליחת אסמכתה בוואטסאפ.</p>}
+      </div>
       <Consent />
-      <Nav onBack={onBack} onNext={start} nextLabel="לתשלום מאובטח" loading={loading} />
+      <Nav onBack={onBack} onNext={start} nextLabel={method === "אשראי" ? "לתשלום מאובטח" : "שריון המועד"} loading={loading} />
       {modal}
     </div>
   );
@@ -541,6 +560,39 @@ function Celebration({ token, startIso, hours, total, name }: { token: string; s
           <Link to="/manage/$token" params={{ token }} className="mt-3 inline-block text-accent underline-offset-4 hover:underline">לניהול ההזמנה</Link>
         </div>
       </motion.div>
+    </section>
+  );
+}
+
+function OfflineConfirm({ token, range, method, total, name }: { token: string; range: { start: string; end: string }; method: PayMethod; total: number; name: string }) {
+  useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); }, []);
+  const dateStr = new Date(range.start).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
+  const msg = `שלום, ביצעתי הרגע הזמנה בבקתה B עבור ${name} בתאריך ${dateStr} בין השעות ${formatTime(range.start)}-${formatTime(range.end)}. בחרתי לשלם באמצעות ${PAY_METHOD_LABEL[method]}. אשמח לקבל פרטים לביצוע ההעברה / לשלוח אסמכתה. תודה!`;
+  const wa = `https://wa.me/972539000374?text=${encodeURIComponent(msg)}`;
+  return (
+    <section className="mx-auto max-w-xl px-5 py-14 text-center">
+      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring} className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-organic">
+        <Clock className="h-10 w-10" />
+      </motion.div>
+      <h1 className="mt-6 font-display text-3xl font-bold text-primary">המועד שוריין, {name.split(" ")[0]}</h1>
+      <p className="mt-1 text-sm text-muted-foreground">סטטוס: ממתין לתשלום / אישור</p>
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        className="mt-6 rounded-2xl border-2 border-accent bg-accent/10 p-5 text-right text-base font-bold leading-relaxed text-foreground">
+        שים לב: ההזמנה ננעלה זמנית. חובה לדווח ולשלוח אלינו אסמכתת תשלום (או תיאום תשלום במזומן) בוואטסאפ לצורך אישור סופי של התור!
+      </motion.div>
+      <motion.a href={wa} target="_blank" rel="noopener noreferrer" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-organic">
+        <MessageCircle className="h-5 w-5" /> מעבר לוואטסאפ לשליחת אסמכתא / קבלת פרטי תשלום
+      </motion.a>
+      <div className="glass mt-6 rounded-3xl p-5 text-right">
+        <dl className="space-y-2 text-sm">
+          <Row k="מועד" v={`${formatDateTime(range.start)}–${formatTime(range.end)}`} />
+          <Row k="תאריך עברי" v={hebrewDate(range.start)} />
+          <Row k="אמצעי תשלום" v={PAY_METHOD_LABEL[method]} />
+          <Row k="סכום לתשלום" v={formatILS(total)} />
+        </dl>
+        <Link to="/manage/$token" params={{ token }} className="mt-4 inline-block text-sm text-accent underline-offset-4 hover:underline">לניהול ההזמנה</Link>
+      </div>
     </section>
   );
 }
