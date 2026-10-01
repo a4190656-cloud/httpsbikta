@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AnimatePresence, motion } from "framer-motion";
-import { ImageIcon, MessageSquareQuote, X } from "lucide-react";
+import { ImageIcon, Maximize2, MessageSquareQuote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getPublicReviews } from "@/lib/bookings.functions";
 import { getGalleryImages } from "@/lib/gallery.functions";
@@ -21,6 +21,7 @@ import gallery11 from "@/assets/gallery/bikta-11.jpg.asset.json";
 const fallbackGallery = [gallery01, gallery02, gallery03, gallery04, gallery05, gallery06, gallery07, gallery08, gallery09, gallery10, gallery11];
 
 export function ReviewsSection() {
+  const [activeReview, setActiveReview] = useState<{ imageUrl: string; title: string | null } | null>(null);
   const fetchReviews = useServerFn(getPublicReviews);
   const { data, isLoading } = useQuery({
     queryKey: ["public-reviews"],
@@ -44,9 +45,11 @@ export function ReviewsSection() {
             {reviews.map((review, index) => (
               <motion.figure key={review.id} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }}
                 className="w-[78vw] max-w-sm shrink-0 snap-center overflow-hidden rounded-2xl border border-border bg-card shadow-organic">
-                <div className="flex min-h-64 items-center justify-center bg-card sm:min-h-72">
-                  <img src={review.imageUrl} alt={review.title || "צילום מסך של תגובת לקוח"} loading={index === 0 ? "eager" : "lazy"} className="block h-auto max-h-[32rem] w-full object-contain" />
-                </div>
+                <Button variant="ghost" onClick={() => setActiveReview({ imageUrl: review.imageUrl, title: review.title })} aria-label="פתיחת צילום התגובה"
+                  className="group relative block h-auto min-h-0 w-full overflow-hidden rounded-none p-0">
+                  <img src={review.imageUrl} alt={review.title || "צילום מסך של תגובת לקוח"} loading={index === 0 ? "eager" : "lazy"} className="block h-auto w-full object-contain" />
+                  <span className="absolute bottom-2 left-2 grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-organic transition-transform group-hover:scale-105" title="הגדלת התמונה"><Maximize2 className="h-4 w-4" /></span>
+                </Button>
                 {review.title && <figcaption className="border-t border-border px-4 py-3 text-sm font-medium">{review.title}</figcaption>}
               </motion.figure>
             ))}
@@ -57,6 +60,15 @@ export function ReviewsSection() {
           </p>
         )}
       </div>
+      <AnimatePresence>
+        {activeReview && (
+          <motion.div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/85 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveReview(null)}>
+            <Button size="icon" variant="secondary" aria-label="סגירת צילום התגובה" onClick={() => setActiveReview(null)} className="absolute left-4 top-4 rounded-full"><X className="h-5 w-5" /></Button>
+            <motion.img src={activeReview.imageUrl} alt={activeReview.title || "צילום מסך של תגובת לקוח"} onClick={(event) => event.stopPropagation()}
+              className="max-h-[88vh] max-w-[94vw] rounded-xl object-contain shadow-organic" initial={{ scale: 0.92 }} animate={{ scale: 1 }} exit={{ scale: 0.92 }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
