@@ -24,24 +24,39 @@ export type IncomeRow = {
   method: string; paid: boolean; status: string;
 };
 
-export async function appendIncome(row: IncomeRow): Promise<boolean> {
+export type SheetLoc = { tab: string; row: number };
+const paidDm = (row: IncomeRow & { paidAt?: Date | null }) => row.paid ? dm(row.paidAt ?? new Date()) : "";
+
+export async function appendIncome(row: IncomeRow & { paidAt?: Date | null; receipt?: boolean }): Promise<SheetLoc | null> {
   const h = headers();
-  if (!h) return false;
+  if (!h) return null;
   try {
     const tab = monthTab(row.date);
     const res = await fetch(`${GATEWAY}/values/'${tab}'!A${FIRST_ROW}:C500`, { headers: h });
-    if (!res.ok) { console.error(`Sheets read failed [${res.status}]: ${await res.text()}`); return false; }
+    if (!res.ok) { console.error(`Sheets read failed [${res.status}]: ${await res.text()}`); return null; }
     const values = ((await res.json()) as { values?: string[][] }).values ?? [];
     let i = values.findIndex((r) => !(r[2] ?? "").trim());
     if (i === -1) i = values.length;
     const prevNum = [...values.slice(0, i)].reverse().map((r) => num(r[0])).find((n) => n > 0) ?? 0;
     const rowNum = FIRST_ROW + i;
     const number = num(values[i]?.[0]) || prevNum + 1;
-    const body = { values: [[number, dm(row.date), row.name, row.hours, row.drinks, row.paid ? dm(new Date()) : "", row.method, row.amount, row.paid, false, row.status]] };
+    const body = { values: [[number, dm(row.date), row.name, row.hours, row.drinks, paidDm(row), row.method, row.amount, row.paid, !!row.receipt, row.status]] };
     const w = await fetch(`${GATEWAY}/values/'${tab}'!A${rowNum}:K${rowNum}?valueInputOption=USER_ENTERED`, { method: "PUT", headers: h, body: JSON.stringify(body) });
-    if (!w.ok) { console.error(`Sheets write failed [${w.status}]: ${await w.text()}`); return false; }
+    if (!w.ok) { console.error(`Sheets write failed [${w.status}]: ${await w.text()}`); return null; }
+    return { tab, row: rowNum };
+  } catch (e) { console.error("Sheets sync error", e); return null; }
+}
+
+/** Rewrites columns B..K of an existing row (keeps the serial number in A). */
+export async function updateIncomeRow(loc: SheetLoc, row: (IncomeRow & { paidAt?: Date | null; receipt?: boolean }) | null): Promise<boolean> {
+  const h = headers();
+  if (!h) return false;
+  try {
+    const vals = row ? [dm(row.date), row.name, row.hours, row.drinks, paidDm(row), row.method, row.amount, row.paid, !!row.receipt, row.status] : Array(10).fill("");
+    const w = await fetch(`${GATEWAY}/values/'${loc.tab}'!B${loc.row}:K${loc.row}?valueInputOption=USER_ENTERED`, { method: "PUT", headers: h, body: JSON.stringify({ values: [vals] }) });
+    if (!w.ok) { console.error(`Sheets update failed [${w.status}]: ${await w.text()}`); return false; }
     return true;
-  } catch (e) { console.error("Sheets sync error", e); return false; }
+  } catch (e) { console.error("Sheets update error", e); return false; }
 }
 
 /** Monthly total from the sheet: the value next to "סך הכנסות לחודש זה", else sum of column H. */
