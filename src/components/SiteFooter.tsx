@@ -21,14 +21,20 @@ export function SiteFooter() {
         <p className="mt-4 leading-relaxed">
           {BUSINESS.name} | ע.מ / ח.פ: {BUSINESS.businessId} | טלפון: <a href={`tel:${BUSINESS.phoneIntl}`} dir="ltr" className="hover:text-primary">{BUSINESS.phone}</a> | כתובת: {BUSINESS.address}
         </p>
-        <div className="mt-6 flex items-center gap-3 border-t border-border/60 pt-5">
+        <a
+          href="https://a4190656-cloud.github.io/AO/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 flex items-center gap-3 border-t border-border/60 pt-5 transition-opacity hover:opacity-80"
+          aria-label="AO אהרן אוירבך שירותי דיגיטל — לאתר הבונה"
+        >
           <img src={aoLogo.url} alt="AO אהרן אוירבך שירותי דיגיטל" className="h-10 w-10 rounded-full object-cover shadow-sm" />
           <p className="text-xs leading-relaxed">
             האתר נבנה ע״י <span className="font-semibold text-foreground/80">AO אהרן אוירבך — שירותי דיגיטל</span>
             {" "}| טלפון ליצירת קשר:{" "}
-            <a href="tel:+972534190656" dir="ltr" className="font-medium hover:text-primary">053-419-0656</a>
+            <span dir="ltr" className="font-medium hover:text-primary">053-419-0656</span>
           </p>
-        </div>
+        </a>
       </div>
     </footer>
   );
