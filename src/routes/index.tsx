@@ -494,6 +494,7 @@ function Row({ k, v }: { k: React.ReactNode; v: React.ReactNode }) {
 
 function Celebration({ token, startIso, hours, total, name }: { token: string; startIso: string; hours: number; total: number; name: string }) {
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
     const colors = ["#2D4A32", "#8C502E", "#FAF7F2", "#C9A06B"];
     confetti({ particleCount: 140, spread: 90, origin: { y: 0.35 }, colors });
     const t = setTimeout(() => confetti({ particleCount: 80, spread: 120, origin: { y: 0.3 }, colors }), 400);
