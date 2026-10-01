@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatILS, formatTime, purposeLabel } from "@/lib/booking-rules";
 import { adminAddBlock, adminList, adminRemoveBlock, getAdminStatus } from "@/lib/bookings.functions";
-import { ManualBookingDialog, RevenuePanel, ReviewsAdminPanel, SettingsPanel } from "@/components/AdminPanels";
+import { LedgerPanel, ManualBookingDialog, RevenuePanel, ReviewsAdminPanel, SettingsPanel } from "@/components/AdminPanels";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -19,8 +19,8 @@ export const Route = createFileRoute("/admin")({
   component: Admin,
 });
 
-const STATUS = { paid: "שולם", cancelled: "בוטל", pending: "ממתין" } as const;
-const STATUS_CLS: Record<string, string> = { paid: "bg-primary text-primary-foreground", cancelled: "bg-muted text-muted-foreground line-through", pending: "bg-accent/15 text-accent" };
+const STATUS = { paid: "שולם", invoiced: "קבלה", pending: "ממתין", cancelled: "בוטל" } as const;
+const STATUS_CLS: Record<string, string> = { paid: "bg-primary text-primary-foreground", cancelled: "bg-muted text-muted-foreground line-through", pending: "bg-accent/15 text-accent", invoiced: "bg-primary text-primary-foreground", no_show: "bg-muted text-muted-foreground line-through", credit: "bg-muted text-muted-foreground" };
 
 function startOfWeek(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - x.getDay()); return x; }
 
@@ -32,7 +32,7 @@ function Admin() {
   const removeBlock = useServerFn(adminRemoveBlock);
   const [view, setView] = useState<"day" | "week">("week");
   const [anchor, setAnchor] = useState(() => new Date());
-  const [filter, setFilter] = useState<string[]>(["paid", "pending"]);
+  const [filter, setFilter] = useState<string[]>(["paid", "invoiced", "pending"]);
   const [blk, setBlk] = useState({ date: "", from: "09:00", to: "17:00", reason: "שימוש בעלים" });
 
   const range = useMemo(() => {
@@ -66,6 +66,7 @@ function Admin() {
         <div className="flex gap-2"><ManualBookingDialog />
         <Button variant="ghost" onClick={async () => { await fetch("/api/admin-verify", { method: "DELETE" }).catch(() => {}); await supabase.auth.signOut().catch(() => {}); qc.clear(); location.assign("/"); }}><LogOut className="h-4 w-4" /> יציאה</Button></div>
       </div>
+      <LedgerPanel />
       <RevenuePanel />
 
       <div className="mt-6 flex flex-wrap items-center gap-2">

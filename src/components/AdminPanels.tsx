@@ -3,16 +3,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Eye, EyeOff, FileSpreadsheet, ImageUp, Plus, Settings2, Trash2 } from "lucide-react";
+import { Eye, EyeOff, FileSpreadsheet, ImageUp, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DRINKS, PURPOSES, drinksTotal, formatILS, type DrinkCart, type DrinkPrices } from "@/lib/booking-rules";
-import { adminAddTransaction, adminAddReview, adminCreateManual, adminDeleteReview, adminListReviews, adminRevenue, adminSaveSettings, adminUpdateReview, getSettings } from "@/lib/bookings.functions";
+import { DRINKS, PURPOSES, drinksTotal, drinksText, formatILS, formatTime, hoursLabel, PAY_METHODS, PAY_METHOD_LABEL, STATUSES, STATUS_LABEL, type DrinkCart, type DrinkPrices } from "@/lib/booking-rules";
+import { adminDeleteBooking, adminLedger, adminUpdateBooking, adminAddTransaction, adminAddReview, adminCreateManual, adminDeleteReview, adminListReviews, adminRevenue, adminSaveSettings, adminUpdateReview, getSettings } from "@/lib/bookings.functions";
 import { supabase } from "@/integrations/supabase/client";
 
-const METHODS = ["מזומן", "העברה", "אחר"] as const;
+const METHODS = PAY_METHODS;
 
 export function ManualBookingDialog() {
   const qc = useQueryClient();
@@ -21,7 +21,7 @@ export function ManualBookingDialog() {
   const { data: s } = useQuery({ queryKey: ["settings"], queryFn: () => fetchS() });
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [f, setF] = useState({ name: "", phone: "", date: "", from: "10:00", to: "11:00", purpose: "clinic", method: "מזומן" as (typeof METHODS)[number], paid: true, notes: "", withTime: true });
+  const [f, setF] = useState({ name: "", phone: "", date: "", from: "10:00", to: "11:00", purpose: "clinic", method: "מזומן" as (typeof METHODS)[number], paid: true, receipt: false, notes: "", withTime: true });
   const [cart, setCart] = useState<DrinkCart>({});
   const [amount, setAmount] = useState<string>("");
 
@@ -38,10 +38,10 @@ export function ManualBookingDialog() {
         fullName: f.name, phone: f.phone,
         startsAt: f.withTime ? new Date(`${f.date}T${f.from}`).toISOString() : null,
         endsAt: f.withTime ? new Date(`${f.date}T${f.to}`).toISOString() : null,
-        purpose: f.purpose, drinks: cart, amount: Number(amount) || 0, method: f.method, paid: f.paid, notes: f.notes || undefined,
+        purpose: f.purpose, drinks: cart, amount: Number(amount) || 0, method: f.method, paid: f.paid, receipt: f.receipt, notes: f.notes || undefined,
       } });
       toast.success("ההזמנה נוספה ונרשמה בגיליון");
-      qc.invalidateQueries({ queryKey: ["admin"] }); qc.invalidateQueries({ queryKey: ["revenue"] });
+      qc.invalidateQueries({ queryKey: ["admin"] }); qc.invalidateQueries({ queryKey: ["revenue"] }); qc.invalidateQueries({ queryKey: ["ledger"] });
       setOpen(false); setCart({});
     } catch (e: any) { toast.error(e?.message ?? "שמירה נכשלה"); }
     finally { setSaving(false); }
@@ -78,9 +78,10 @@ export function ManualBookingDialog() {
           <div className="space-y-1"><Label>סכום (₪)</Label><Input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
           <div className="space-y-1"><Label>אמצעי תשלום</Label>
             <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={f.method} onChange={(e) => setF({ ...f, method: e.target.value as any })}>
-              {METHODS.map((m) => <option key={m}>{m}</option>)}
+              {METHODS.map((m) => <option key={m} value={m}>{PAY_METHOD_LABEL[m]}</option>)}
             </select></div>
-          <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={f.paid} onChange={(e) => setF({ ...f, paid: e.target.checked })} /> שולם</label>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={f.paid} onChange={(e) => setF({ ...f, paid: e.target.checked })} /> שולם כבר?</label>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={f.receipt} onChange={(e) => setF({ ...f, receipt: e.target.checked })} /> הופקה קבלה/חשבונית?</label>
           <div className="space-y-1 sm:col-span-2"><Label>הערות</Label><Input value={f.notes} maxLength={1000} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
         </div>
         <Button className="mt-2 w-full" disabled={saving} onClick={submit}>{saving ? "שומר…" : "שמירה"}</Button>
@@ -274,5 +275,117 @@ export function ReviewsAdminPanel() {
         </div>
       )}
     </section>
+  );
+}
+
+// ---------- "יומן בקתה" ledger ----------
+const BADGE: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900/30 dark:text-amber-200",
+  paid: "bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-900/30 dark:text-sky-200",
+  invoiced: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-200",
+  cancelled: "bg-muted text-muted-foreground border-border",
+  no_show: "bg-red-50 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-200",
+  credit: "bg-muted text-muted-foreground border-border",
+};
+const jlm = (iso: string) => new Date(iso).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem", day: "numeric", month: "numeric" });
+const ymd = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(new Date(iso));
+
+export function LedgerPanel() {
+  const qc = useQueryClient();
+  const ledger = useServerFn(adminLedger);
+  const update = useServerFn(adminUpdateBooking);
+  const del = useServerFn(adminDeleteBooking);
+  const [month, setMonth] = useState(() => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit" }).format(new Date()));
+  const [edit, setEdit] = useState<any | null>(null);
+  const { data, isLoading } = useQuery({ queryKey: ["ledger", month], queryFn: () => ledger({ data: { month } }) });
+  const refresh = () => { qc.invalidateQueries({ queryKey: ["ledger"] }); qc.invalidateQueries({ queryKey: ["admin"] }); qc.invalidateQueries({ queryKey: ["revenue"] }); };
+  const patch = async (id: string, p: Record<string, unknown>) => {
+    try { await update({ data: { id, ...p } as any }); refresh(); } catch (e: any) { toast.error(e?.message ?? "עדכון נכשל"); }
+  };
+  const monthLabel = new Date(`${month}-01T12:00`).toLocaleDateString("he-IL", { month: "long", year: "numeric" });
+  const rows = data?.rows ?? [];
+
+  return (
+    <section className="glass mt-6 rounded-2xl p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 font-semibold"><FileSpreadsheet className="h-4 w-4 text-accent" /> יומן בקתה</h2>
+        <Input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} className="w-44" aria-label="בחירת חודש" />
+      </div>
+      <div className="mt-3 rounded-xl bg-primary px-4 py-3 text-primary-foreground">
+        <span className="text-sm opacity-90">סך הכנסות לחודש זה ({monthLabel}): </span>
+        <span className="font-display text-2xl font-bold">{formatILS(data?.total ?? 0)}</span>
+      </div>
+      {isLoading ? <p className="mt-4 text-sm text-muted-foreground">טוען…</p> : (
+        <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card">
+          <table className="w-full min-w-[980px] text-sm">
+            <thead className="bg-muted/60 text-xs text-muted-foreground">
+              <tr>{["#", "תאריך", "שם ומשפחה", "שעות", "שתייה", "אמצעי תשלום", "תאריך תשלום", "סכום", "שולם", "קבלה", "סטטוס", "פעולות"].map((h) => <th key={h} className="px-2 py-2 text-right font-medium">{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {rows.map((r: any, i: number) => {
+                const paid = r.status === "paid" || r.status === "invoiced";
+                return (
+                  <tr key={r.id} className="border-t border-border align-middle">
+                    <td className="px-2 py-2 text-muted-foreground">{i + 1}</td>
+                    <td className="px-2 py-2 whitespace-nowrap">{jlm(r.starts_at)}</td>
+                    <td className="px-2 py-2"><div className="font-medium">{r.full_name}</div><div dir="ltr" className="text-right text-xs text-muted-foreground">{r.phone}</div></td>
+                    <td className="px-2 py-2 whitespace-nowrap text-xs">{r.kind === "booking" ? <>{formatTime(r.starts_at)}–{formatTime(r.ends_at)}<div className="text-muted-foreground">{hoursLabel(Number(r.duration_hours))}</div></> : "שתייה בלבד"}</td>
+                    <td className="px-2 py-2 text-xs">{drinksText(r.drinks) || "—"}</td>
+                    <td className="px-2 py-2"><span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs">{r.payment_method}</span></td>
+                    <td className="px-2 py-2"><Input type="date" className="h-8 w-[130px] text-xs" value={r.paid_at ? ymd(r.paid_at) : ""} onChange={(e) => patch(r.id, { paidAt: e.target.value || null })} /></td>
+                    <td className="px-2 py-2 font-semibold whitespace-nowrap">{formatILS(Number(r.total))}</td>
+                    <td className="px-2 py-2 text-center"><input type="checkbox" aria-label="שולם" className="h-4 w-4 accent-primary" checked={paid} onChange={(e) => patch(r.id, { paid: e.target.checked })} /></td>
+                    <td className="px-2 py-2 text-center"><input type="checkbox" aria-label="קבלה" className="h-4 w-4 accent-primary" checked={!!r.receipt_issued} onChange={(e) => patch(r.id, { receipt: e.target.checked })} /></td>
+                    <td className="px-2 py-2">
+                      <select aria-label="סטטוס" value={r.status} onChange={(e) => patch(r.id, { status: e.target.value })}
+                        className={`h-8 rounded-full border px-2 text-xs font-medium ${BADGE[r.status] ?? BADGE["cancelled"]}`}>
+                        {STATUSES.map((st) => <option key={st} value={st}>{STATUS_LABEL[st]}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-2 py-2 whitespace-nowrap">
+                      <Button size="icon" variant="ghost" aria-label="עריכה" onClick={() => setEdit(r)}><Pencil className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" aria-label="מחיקה" onClick={async () => {
+                        if (!confirm("האם למחוק הזמנה זו?")) return;
+                        try { await del({ data: { id: r.id } }); toast.success("ההזמנה נמחקה והמועד שוחרר"); refresh(); } catch (e: any) { toast.error(e?.message ?? "מחיקה נכשלה"); }
+                      }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!rows.length && <tr><td colSpan={12} className="px-3 py-6 text-center text-muted-foreground">אין רשומות בחודש זה.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="mt-2 text-xs text-muted-foreground">כל שינוי נשמר מיד ומתעדכן ברקע גם בגיליון.</p>
+      {edit && <EditBookingDialog row={edit} onClose={() => setEdit(null)} onSave={async (p) => { await patch(edit.id, p); setEdit(null); }} />}
+    </section>
+  );
+}
+
+function EditBookingDialog({ row, onClose, onSave }: { row: any; onClose: () => void; onSave: (p: Record<string, unknown>) => Promise<void> }) {
+  const [f, setF] = useState({ fullName: row.full_name, phone: row.phone, total: String(row.total), method: row.payment_method, notes: row.notes ?? "" });
+  const [saving, setSaving] = useState(false);
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent dir="rtl" className="sm:max-w-md">
+        <DialogHeader><DialogTitle>עריכת רשומה</DialogTitle></DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1"><Label>שם</Label><Input value={f.fullName} maxLength={100} onChange={(e) => setF({ ...f, fullName: e.target.value })} /></div>
+          <div className="space-y-1"><Label>טלפון</Label><Input dir="ltr" value={f.phone} maxLength={20} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
+          <div className="space-y-1"><Label>סכום (₪)</Label><Input type="number" min={0} value={f.total} onChange={(e) => setF({ ...f, total: e.target.value })} /></div>
+          <div className="space-y-1"><Label>אמצעי תשלום</Label>
+            <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={f.method} onChange={(e) => setF({ ...f, method: e.target.value })}>
+              {[...PAY_METHODS, "אחר"].map((m) => <option key={m} value={m}>{PAY_METHOD_LABEL[m] ?? m}</option>)}
+            </select></div>
+          <div className="space-y-1 sm:col-span-2"><Label>הערות</Label><Input value={f.notes} maxLength={1000} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
+        </div>
+        <Button className="w-full" disabled={saving || !f.fullName.trim()} onClick={async () => {
+          setSaving(true);
+          try { await onSave({ fullName: f.fullName, phone: f.phone, total: Number(f.total) || 0, method: f.method, notes: f.notes }); toast.success("נשמר"); }
+          finally { setSaving(false); }
+        }}>{saving ? "שומר…" : "שמירה"}</Button>
+      </DialogContent>
+    </Dialog>
   );
 }
