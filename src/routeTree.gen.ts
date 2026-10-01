@@ -20,6 +20,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiAdminVerifyRouteImport } from './routes/api/admin-verify'
 import { Route as ManageTokenRouteImport } from './routes/manage.$token'
 import { Route as ApiPublicGalleryFileIdRouteImport } from './routes/api/public/gallery.$fileId'
+import { Route as ApiPublicReviewsReviewIdRouteImport } from './routes/api/public/reviews.$reviewId'
 import { Route as ApiPublicSbSplatRouteImport } from './routes/api/public/sb.$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -77,6 +78,12 @@ const ApiPublicGalleryFileIdRoute = ApiPublicGalleryFileIdRouteImport.update({
   path: '/api/public/gallery/$fileId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicReviewsReviewIdRoute =
+  ApiPublicReviewsReviewIdRouteImport.update({
+    id: '/api/public/reviews/$reviewId',
+    path: '/api/public/reviews/$reviewId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicSbSplatRoute = ApiPublicSbSplatRouteImport.update({
   id: '/api/public/sb/$',
   path: '/api/public/sb/$',
@@ -95,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/api/admin-verify': typeof ApiAdminVerifyRoute
   '/manage/$token': typeof ManageTokenRoute
   '/api/public/gallery/$fileId': typeof ApiPublicGalleryFileIdRoute
+  '/api/public/reviews/$reviewId': typeof ApiPublicReviewsReviewIdRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
 }
 export interface FileRoutesByTo {
@@ -109,6 +117,7 @@ export interface FileRoutesByTo {
   '/api/admin-verify': typeof ApiAdminVerifyRoute
   '/manage/$token': typeof ManageTokenRoute
   '/api/public/gallery/$fileId': typeof ApiPublicGalleryFileIdRoute
+  '/api/public/reviews/$reviewId': typeof ApiPublicReviewsReviewIdRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
 }
 export interface FileRoutesById {
@@ -124,6 +133,7 @@ export interface FileRoutesById {
   '/api/admin-verify': typeof ApiAdminVerifyRoute
   '/manage/$token': typeof ManageTokenRoute
   '/api/public/gallery/$fileId': typeof ApiPublicGalleryFileIdRoute
+  '/api/public/reviews/$reviewId': typeof ApiPublicReviewsReviewIdRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
 }
 export interface FileRouteTypes {
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/api/admin-verify'
     | '/manage/$token'
     | '/api/public/gallery/$fileId'
+    | '/api/public/reviews/$reviewId'
     | '/api/public/sb/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/api/admin-verify'
     | '/manage/$token'
     | '/api/public/gallery/$fileId'
+    | '/api/public/reviews/$reviewId'
     | '/api/public/sb/$'
   id:
     | '__root__'
@@ -168,6 +180,7 @@ export interface FileRouteTypes {
     | '/api/admin-verify'
     | '/manage/$token'
     | '/api/public/gallery/$fileId'
+    | '/api/public/reviews/$reviewId'
     | '/api/public/sb/$'
   fileRoutesById: FileRoutesById
 }
@@ -183,6 +196,7 @@ export interface RootRouteChildren {
   ApiAdminVerifyRoute: typeof ApiAdminVerifyRoute
   ManageTokenRoute: typeof ManageTokenRoute
   ApiPublicGalleryFileIdRoute: typeof ApiPublicGalleryFileIdRoute
+  ApiPublicReviewsReviewIdRoute: typeof ApiPublicReviewsReviewIdRoute
   ApiPublicSbSplatRoute: typeof ApiPublicSbSplatRoute
 }
 
@@ -265,6 +279,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGalleryFileIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/reviews/$reviewId': {
+      id: '/api/public/reviews/$reviewId'
+      path: '/api/public/reviews/$reviewId'
+      fullPath: '/api/public/reviews/$reviewId'
+      preLoaderRoute: typeof ApiPublicReviewsReviewIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/sb/$': {
       id: '/api/public/sb/$'
       path: '/api/public/sb/$'
@@ -287,6 +308,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminVerifyRoute: ApiAdminVerifyRoute,
   ManageTokenRoute: ManageTokenRoute,
   ApiPublicGalleryFileIdRoute: ApiPublicGalleryFileIdRoute,
+  ApiPublicReviewsReviewIdRoute: ApiPublicReviewsReviewIdRoute,
   ApiPublicSbSplatRoute: ApiPublicSbSplatRoute,
 }
 export const routeTree = rootRouteImport

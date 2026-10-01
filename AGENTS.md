@@ -16,7 +16,7 @@
 - Google Calendar is accessed only from src/lib/gcal.server.ts via the connector gateway — single integration point.
 - Payment is TEST MODE: /checkout-test posts `{source:"takbull", type}` to the parent; swap for the real Takbull iframe + verified server callback when credentials exist.
 - First signed-in user auto-becomes admin (bootstrap in getAdminStatus) — owner setup without manual SQL.
-- Customer review screenshots use the private `customer-reviews` bucket and signed URLs; only admins manage metadata and files — public viewers never receive storage permissions.
+- Customer review screenshots use the private `customer-reviews` bucket and a same-origin public image route that exposes visible review IDs only; only admins manage metadata and files — works on filtered networks without public storage permissions.
 
 - Admin server functions use requireAdmin (src/lib/admin-auth.ts): signed-in admin bearer OR HMAC-signed HttpOnly PIN cookie from /api/admin-verify (ADMIN_ACCESS_KEY) — emergency access when the auth service is blocked by network filters.
 - Browser backend calls are rewritten to the same-origin proxy /api/public/sb/* (src/lib/backend-proxy.ts) — bypasses filters that block the backend domain.
