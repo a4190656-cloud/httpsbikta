@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { BUSINESS } from "@/lib/legal";
+import aoLogo from "@/assets/ao-logo.png.asset.json";
 
 const LINKS = [
   { to: "/terms", label: "תנאי שימוש ותקנון" },
