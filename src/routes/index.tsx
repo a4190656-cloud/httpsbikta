@@ -139,16 +139,20 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function FloatingActions({ onDrinks }: { onDrinks: () => void }) {
+  const breathe = (delay: number) => ({
+    animate: { scale: [1, 1.06, 1] },
+    transition: { duration: 2.6, repeat: Infinity, ease: "easeInOut" as const, delay },
+  });
   return (
     <>
-      <motion.div className="fixed bottom-5 right-3 z-30 sm:bottom-7 sm:right-6" animate={{ y: [0, -4, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}>
-        <Button asChild className="h-12 rounded-full px-4 shadow-organic sm:h-14 sm:px-5">
+      <motion.div className="fixed bottom-5 right-3 z-30 sm:bottom-7 sm:right-6" {...breathe(0)}>
+        <Button asChild className="h-11 w-11 rounded-full p-0 shadow-organic">
           <a href="https://wa.me/972539000374" target="_blank" rel="noopener noreferrer" aria-label="יצירת קשר בוואטסאפ">
-            <MessageCircle className="h-5 w-5" /> <span>יצירת קשר</span>
+            <MessageCircle className="h-5 w-5" />
           </a>
         </Button>
       </motion.div>
-      <motion.div className="fixed bottom-5 left-3 z-30 sm:bottom-7 sm:left-6" animate={{ y: [0, -4, 0] }} transition={{ duration: 3.2, repeat: Infinity, delay: 0.45, ease: "easeInOut" }}>
+      <motion.div className="fixed bottom-5 left-3 z-30 sm:bottom-7 sm:left-6" {...breathe(1.3)}>
         <Button variant="secondary" className="h-12 rounded-full border border-accent/30 px-4 shadow-organic sm:h-14 sm:px-5" onClick={onDrinks}>
           <CupSoda className="h-5 w-5 text-accent" /> <span>תשלום על שתייה</span>
         </Button>
