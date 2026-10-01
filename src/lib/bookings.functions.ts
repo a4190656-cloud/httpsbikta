@@ -31,7 +31,15 @@ export const getPublicReviews = createServerFn({ method: "GET" }).handler(async 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin.from("customer_reviews").select("id, storage_path, title, is_visible, sort_order, created_at")
     .eq("is_visible", true).order("sort_order").order("created_at", { ascending: false });
-  return { reviews: await reviewsWithUrls((data ?? []) as ReviewRow[]) };
+  return {
+    reviews: ((data ?? []) as ReviewRow[]).map((review) => ({
+      id: review.id,
+      title: review.title,
+      isVisible: review.is_visible,
+      sortOrder: review.sort_order,
+      imageUrl: `/api/public/reviews/${review.id}`,
+    })),
+  };
 });
 
 async function busyBetween(timeMin: string, timeMax: string): Promise<Busy[]> {
