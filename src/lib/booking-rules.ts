@@ -116,3 +116,17 @@ function hebrewNumeral(n: number): string {
   if (s.length === 1) return s + "׳";
   return s.slice(0, -1) + "״" + s.slice(-1);
 }
+
+// ---------- Ledger ("יומן בקתה") ----------
+export const PAY_METHODS = ["אשראי", "ביט", "העברה", "מזומן"] as const;
+export type PayMethod = (typeof PAY_METHODS)[number];
+export const PAY_METHOD_LABEL: Record<string, string> = { "אשראי": "אשראי", "ביט": "ביט", "העברה": "העברה בנקאית", "מזומן": "מזומן במקום" };
+export const STATUSES = ["pending", "paid", "invoiced", "cancelled", "no_show", "credit"] as const;
+export const STATUS_LABEL: Record<string, string> = {
+  pending: "ממתין לתשלום / אישור", paid: "שולם", invoiced: "הופקה קבלה",
+  cancelled: "בוטל", no_show: "לא הייתה ולא שילמה", credit: "נשאר זכות",
+};
+/** Statuses that count as income. */
+export const INCOME_STATUSES = ["paid", "invoiced"];
+/** Statuses that free the calendar slot. */
+export const FREE_STATUSES = ["cancelled", "no_show"];
