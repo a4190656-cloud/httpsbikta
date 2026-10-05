@@ -3,7 +3,8 @@ import { z } from "zod";
 import { requireAdmin } from "./admin-auth";
 import {
   canCancel, DEFAULT_SETTINGS, DRINKS, drinksText, drinksTotal, priceFor, purposeLabel, PURPOSES,
-  splitVat, type DrinkCart, type Settings, PAY_METHODS, STATUSES, STATUS_LABEL, INCOME_STATUSES, FREE_STATUSES,
+  splitVat, type DrinkCart, type Settings, PAY_METHODS, PAYMENT_RECORD_METHODS, END_OF_MONTH_METHODS,
+  paymentRecordMethod, STATUSES, STATUS_LABEL, INCOME_STATUSES, FREE_STATUSES,
 } from "./booking-rules";
 
 type Busy = { start: string; end: string };
@@ -51,8 +52,7 @@ async function busyBetween(timeMin: string, timeMax: string): Promise<Busy[]> {
     supabaseAdmin.from("blocks").select("starts_at, ends_at").lt("starts_at", timeMax).gt("ends_at", timeMin),
     gcalBusy(timeMin, timeMax),
   ]);
-  const fresh = Date.now() - 20 * 60 * 1000; // pending holds expire after 20 min
-  const bookings = (bk.data ?? []).filter((b) => b.status !== "pending" || b.payment_method !== "אשראי" || new Date(b.created_at).getTime() > fresh);
+  const bookings = bk.data ?? [];
   return [
     ...bookings.map((b) => ({ start: b.starts_at, end: b.ends_at })),
     ...(bl.data ?? []).map((b) => ({ start: b.starts_at, end: b.ends_at })),
@@ -83,6 +83,11 @@ const bookingInput = z.object({
   notes: z.string().trim().max(1000).optional(),
   drinks: cartSchema.optional(),
   paymentMethod: z.enum(PAY_METHODS).optional(),
+  endOfMonthMethod: z.enum(END_OF_MONTH_METHODS).optional(),
+}).superRefine((data, ctx) => {
+  if (data.paymentMethod === "סוף חודש" && !data.endOfMonthMethod) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["endOfMonthMethod"], message: "יש לבחור כיצד יוסדר התשלום בסוף החודש" });
+  }
 });
 
 export const createBooking = createServerFn({ method: "POST" })
@@ -105,20 +110,25 @@ export const createBooking = createServerFn({ method: "POST" })
       purpose: data.purpose ?? "other", starts_at: start.toISOString(), ends_at: end, hours: Math.ceil(hours), duration_hours: hours,
       full_name: data.fullName, phone: data.phone, email: data.email || "", attendees: data.attendees ?? 1,
       notes: data.notes || null, subtotal: p.subtotal, vat: p.vat, total: p.total, manage_token: token,
-      drinks: cart, drinks_total: p.drinks, payment_method: data.paymentMethod ?? "אשראי",
+      drinks: cart, drinks_total: p.drinks,
+      payment_method: paymentRecordMethod(data.paymentMethod ?? "ביט", data.endOfMonthMethod),
     }).select("*").single();
     if (error) throw new Error("לא הצלחנו לשמור את ההזמנה");
-    // Offline methods (Bit / transfer / cash): lock the slot now and log it, pending confirmation.
-    if (data.paymentMethod && data.paymentMethod !== "אשראי") {
-      const eventId = await gcalFor(row as unknown as BookingRow);
-      if (eventId) await supabaseAdmin.from("bookings").update({ google_event_id: eventId }).eq("id", row.id);
-      await syncSheet(row as unknown as BookingRow);
-    }
+    const eventId = await gcalFor(row as unknown as BookingRow);
+    if (eventId) await supabaseAdmin.from("bookings").update({ google_event_id: eventId }).eq("id", row.id);
+    await syncSheet(row as unknown as BookingRow);
     return { id: row.id, token, total: p.total };
   });
 
 export const createDrinkOrder = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ fullName: z.string().trim().min(2).max(100), phone: phoneSchema, drinks: cartSchema }).parse(d))
+  .inputValidator((d) => z.object({
+    fullName: z.string().trim().min(2).max(100), phone: phoneSchema, drinks: cartSchema,
+    paymentMethod: z.enum(PAY_METHODS), endOfMonthMethod: z.enum(END_OF_MONTH_METHODS).optional(),
+  }).superRefine((value, ctx) => {
+    if (value.paymentMethod === "סוף חודש" && !value.endOfMonthMethod) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["endOfMonthMethod"], message: "יש לבחור כיצד יוסדר התשלום בסוף החודש" });
+    }
+  }).parse(d))
   .handler(async ({ data }) => {
     const s = await loadSettings();
     const total = drinksTotal(data.drinks, s.drinkPrices);
@@ -127,12 +137,14 @@ export const createDrinkOrder = createServerFn({ method: "POST" })
     const now = new Date().toISOString();
     const token = newToken();
     const v = splitVat(total);
-    const { error } = await supabaseAdmin.from("bookings").insert({
+    const { data: row, error } = await supabaseAdmin.from("bookings").insert({
       kind: "drinks", purpose: "drinks", starts_at: now, ends_at: now, hours: 0, duration_hours: 0,
       full_name: data.fullName, phone: data.phone, email: "", attendees: 1,
       subtotal: v.subtotal, vat: v.vat, total, manage_token: token, drinks: data.drinks, drinks_total: total,
-    });
+      payment_method: paymentRecordMethod(data.paymentMethod, data.endOfMonthMethod),
+    }).select("*").single();
     if (error) throw new Error("לא הצלחנו לשמור את ההזמנה");
+    await syncSheet(row as unknown as BookingRow);
     return { token, total };
   });
 
@@ -184,22 +196,6 @@ async function syncPaid(b: BookingRow) {
   await syncSheet(b);
   return eventId;
 }
-
-// TEST MODE: confirms payment without a real processor. Replace with a verified
-// Takbull server callback once merchant credentials exist.
-export const confirmPayment = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ token: z.string().min(32).max(128) }).parse(d))
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: b } = await supabaseAdmin.from("bookings").select("*").eq("manage_token", data.token).single();
-    if (!b) throw new Error("ההזמנה לא נמצאה");
-    if (b.status === "paid") return { ok: true };
-    const paidAt = new Date().toISOString();
-    const paid = { ...b, status: "paid", paid_at: paidAt } as unknown as BookingRow;
-    const eventId = await syncPaid(paid);
-    await supabaseAdmin.from("bookings").update({ status: "paid", paid_at: paidAt, ...(eventId ? { google_event_id: eventId } : {}) }).eq("id", b.id);
-    return { ok: true };
-  });
 
 export const getBookingByToken = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ token: z.string().min(32).max(128) }).parse(d))
@@ -291,7 +287,7 @@ export const adminCreateManual = createServerFn({ method: "POST" })
     purpose: z.string().max(20),
     drinks: cartSchema,
     amount: z.number().min(0).max(100000),
-    method: z.enum([...PAY_METHODS, "אחר"]),
+    method: z.enum([...PAYMENT_RECORD_METHODS, "אחר"]),
     paid: z.boolean(),
     receipt: z.boolean().optional(),
     notes: z.string().max(1000).optional(),
@@ -466,7 +462,7 @@ export const adminUpdateBooking = createServerFn({ method: "POST" })
     paid: z.boolean().optional(),
     receipt: z.boolean().optional(),
     paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
-    method: z.enum([...PAY_METHODS, "אחר"]).optional(),
+    method: z.enum([...PAYMENT_RECORD_METHODS, "אחר"]).optional(),
     total: z.number().min(0).max(100000).optional(),
     fullName: z.string().trim().min(1).max(100).optional(),
     phone: z.string().trim().max(20).optional(),

@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DRINKS, PURPOSES, drinksTotal, drinksText, formatILS, formatTime, hoursLabel, PAY_METHODS, PAY_METHOD_LABEL, STATUSES, STATUS_LABEL, type DrinkCart, type DrinkPrices } from "@/lib/booking-rules";
+import { DRINKS, PURPOSES, drinksTotal, drinksText, formatILS, formatTime, hoursLabel, PAYMENT_RECORD_METHODS, PAY_METHOD_LABEL, STATUSES, STATUS_LABEL, type DrinkCart, type DrinkPrices } from "@/lib/booking-rules";
 import { adminDeleteBooking, adminLedger, adminUpdateBooking, adminAddTransaction, adminAddReview, adminCreateManual, adminDeleteReview, adminListReviews, adminRevenue, adminSaveSettings, adminUpdateReview, getSettings } from "@/lib/bookings.functions";
 import { supabase } from "@/integrations/supabase/client";
 
-const METHODS = PAY_METHODS;
+const METHODS = PAYMENT_RECORD_METHODS;
 
 export function ManualBookingDialog() {
   const qc = useQueryClient();
@@ -162,7 +162,7 @@ function TransactionDialog() {
           <div className="space-y-1"><Label>סכום (₪)</Label><Input type="number" min={0} value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></div>
           <div className="space-y-1"><Label>אמצעי תשלום</Label>
             <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={f.method} onChange={(e) => setF({ ...f, method: e.target.value })}>
-              {["מזומן", "העברה", "אשראי", "אחר"].map((m) => <option key={m}>{m}</option>)}
+              {[...PAYMENT_RECORD_METHODS, "אחר"].map((m) => <option key={m} value={m}>{PAY_METHOD_LABEL[m] ?? m}</option>)}
             </select></div>
           <div className="space-y-1"><Label>הערה</Label><Input value={f.notes} maxLength={200} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
         </div>
@@ -330,7 +330,7 @@ export function LedgerPanel() {
                   <span className="shrink-0 font-display text-lg font-bold text-primary">{formatILS(Number(r.total))}</span>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-lg bg-muted/60 p-2"><span className="text-muted-foreground">תשלום</span><div className="mt-0.5 font-medium">{r.payment_method}</div></div>
+                  <div className="rounded-lg bg-muted/60 p-2"><span className="text-muted-foreground">תשלום</span><div className="mt-0.5 font-medium">{PAY_METHOD_LABEL[r.payment_method] ?? r.payment_method}</div></div>
                   <div className="rounded-lg bg-muted/60 p-2"><span className="text-muted-foreground">שתייה</span><div className="mt-0.5 truncate font-medium">{drinksText(r.drinks) || "—"}</div></div>
                 </div>
                 <div className="mt-3 grid gap-2">
@@ -370,7 +370,7 @@ export function LedgerPanel() {
                     <td className="px-2 py-2"><div className="font-medium">{r.full_name}</div><div dir="ltr" className="text-right text-xs text-muted-foreground">{r.phone}</div></td>
                     <td className="px-2 py-2 whitespace-nowrap text-xs">{r.kind === "booking" ? <>{formatTime(r.starts_at)}–{formatTime(r.ends_at)}<div className="text-muted-foreground">{hoursLabel(Number(r.duration_hours))}</div></> : "שתייה בלבד"}</td>
                     <td className="px-2 py-2 text-xs">{drinksText(r.drinks) || "—"}</td>
-                    <td className="px-2 py-2"><span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs">{r.payment_method}</span></td>
+                    <td className="px-2 py-2"><span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs">{PAY_METHOD_LABEL[r.payment_method] ?? r.payment_method}</span></td>
                     <td className="px-2 py-2"><Input type="date" className="h-8 w-[130px] text-xs" value={r.paid_at ? ymd(r.paid_at) : ""} onChange={(e) => patch(r.id, { paidAt: e.target.value || null })} /></td>
                     <td className="px-2 py-2 font-semibold whitespace-nowrap">{formatILS(Number(r.total))}</td>
                     <td className="px-2 py-2 text-center"><input type="checkbox" aria-label="שולם" className="h-4 w-4 accent-primary" checked={paid} onChange={(e) => patch(r.id, { paid: e.target.checked })} /></td>
@@ -415,7 +415,7 @@ function EditBookingDialog({ row, onClose, onSave }: { row: any; onClose: () => 
           <div className="space-y-1"><Label>סכום (₪)</Label><Input type="number" min={0} value={f.total} onChange={(e) => setF({ ...f, total: e.target.value })} /></div>
           <div className="space-y-1"><Label>אמצעי תשלום</Label>
             <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={f.method} onChange={(e) => setF({ ...f, method: e.target.value })}>
-              {[...PAY_METHODS, "אחר"].map((m) => <option key={m} value={m}>{PAY_METHOD_LABEL[m] ?? m}</option>)}
+              {[...PAYMENT_RECORD_METHODS, "אחר"].map((m) => <option key={m} value={m}>{PAY_METHOD_LABEL[m] ?? m}</option>)}
             </select></div>
           <div className="space-y-1 sm:col-span-2"><Label>הערות</Label><Input value={f.notes} maxLength={1000} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
         </div>
