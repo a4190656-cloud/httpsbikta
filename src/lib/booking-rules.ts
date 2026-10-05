@@ -49,36 +49,10 @@ export function hoursLabel(h: number) {
 
 export const purposeLabel = (id: string | null) => (id === "drinks" ? "שתייה" : PURPOSES.find((p) => p.id === id)?.label ?? id ?? "");
 
-// Israeli holidays (non-business days), YYYY-MM-DD
-const HOLIDAYS = new Set([
-  "2026-04-02", "2026-04-08", "2026-04-22", "2026-05-22", "2026-09-12", "2026-09-13",
-  "2026-09-21", "2026-09-26", "2026-10-03",
-  "2027-03-23", "2027-03-29", "2027-05-12", "2027-06-11", "2027-10-02", "2027-10-03",
-  "2027-10-11", "2027-10-16", "2027-10-23",
-]);
-
-const ymd = (d: Date) =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(d);
-const weekday = (d: Date) =>
-  new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Jerusalem", weekday: "short" }).format(d);
-
-export function isBusinessDay(d: Date) {
-  const w = weekday(d);
-  return w !== "Fri" && w !== "Sat" && !HOLIDAYS.has(ymd(d));
+export function hoursUntil(start: Date, now = new Date()) {
+  return Math.max(0, Math.floor((start.getTime() - now.getTime()) / 3_600_000));
 }
-
-/** Full business days strictly between now and the booking date. */
-export function businessDaysUntil(start: Date, now = new Date()) {
-  let count = 0;
-  const cur = new Date(now);
-  cur.setDate(cur.getDate() + 1);
-  while (ymd(cur) < ymd(start)) {
-    if (isBusinessDay(cur)) count++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return count;
-}
-export const canCancel = (start: Date, now = new Date()) => businessDaysUntil(start, now) >= 2;
+export const canCancel = (start: Date, now = new Date()) => start.getTime() - now.getTime() >= 48 * 3_600_000;
 
 export function formatILS(n: number) {
   return new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS" }).format(n);
@@ -118,9 +92,32 @@ function hebrewNumeral(n: number): string {
 }
 
 // ---------- Ledger ("יומן בקתה") ----------
-export const PAY_METHODS = ["אשראי", "ביט", "העברה", "מזומן"] as const;
+export const PAY_METHODS = ["ביט", "העברה", "מזומן", "סוף חודש"] as const;
 export type PayMethod = (typeof PAY_METHODS)[number];
-export const PAY_METHOD_LABEL: Record<string, string> = { "אשראי": "אשראי", "ביט": "ביט", "העברה": "העברה בנקאית", "מזומן": "מזומן במקום" };
+export const END_OF_MONTH_METHODS = ["ביט", "העברה", "מזומן"] as const;
+export type EndOfMonthMethod = (typeof END_OF_MONTH_METHODS)[number];
+export const PAYMENT_RECORD_METHODS = ["ביט", "העברה", "מזומן", "סוף חודש - ביט", "סוף חודש - העברה", "סוף חודש - מזומן"] as const;
+export type PaymentRecordMethod = (typeof PAYMENT_RECORD_METHODS)[number];
+export const PAY_METHOD_LABEL: Record<string, string> = {
+  "ביט": "ביט",
+  "העברה": "העברה בנקאית",
+  "מזומן": "מזומן במקום",
+  "סוף חודש": "תשלום מרוכז בסוף חודש",
+  "סוף חודש - ביט": "סוף חודש — ביט",
+  "סוף חודש - העברה": "סוף חודש — העברה בנקאית",
+  "סוף חודש - מזומן": "סוף חודש — מזומן",
+};
+export function paymentRecordMethod(method: PayMethod, settlement?: EndOfMonthMethod): PaymentRecordMethod {
+  if (method !== "סוף חודש") return method;
+  if (!settlement) throw new Error("יש לבחור כיצד יוסדר התשלום בסוף החודש");
+  return `סוף חודש - ${settlement}`;
+}
+export function paymentInstructions(method: PayMethod, settlement?: EndOfMonthMethod) {
+  if (method === "ביט") return "אופן תשלום: ביט למספר 053-9000374 (נא לצרף צילום אישור העברה)";
+  if (method === "העברה") return "אופן תשלום: העברה בנקאית\nבנק: 12 (הפועלים) | סניף: 290 | חשבון: 62225\nעל שם: מחלא בוקשפן\nסיבת העברה חובה: שירותי משרד\n(נא לצרף צילום אסמכתא)";
+  if (method === "מזומן") return "אופן תשלום: מזומן במקום בבקתה";
+  return `אופן תשלום: תשלום מרוכז בסוף חודש (אמצעי תשלום נבחר: ${PAY_METHOD_LABEL[settlement ?? ""] ?? "לא נבחר"})`;
+}
 export const STATUSES = ["pending", "paid", "invoiced", "cancelled", "no_show", "credit"] as const;
 export const STATUS_LABEL: Record<string, string> = {
   pending: "ממתין לתשלום / אישור", paid: "שולם", invoiced: "הופקה קבלה",

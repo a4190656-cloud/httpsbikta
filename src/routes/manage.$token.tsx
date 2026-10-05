@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
-import { businessDaysUntil, canCancel, formatDateTime, formatILS, hebrewDate, purposeLabel } from "@/lib/booking-rules";
+import { hoursUntil, canCancel, formatDateTime, formatILS, hebrewDate, purposeLabel } from "@/lib/booking-rules";
 import { cancelBooking, getBookingByToken } from "@/lib/bookings.functions";
 
 export const Route = createFileRoute("/manage/$token")({
@@ -42,7 +42,7 @@ function Manage() {
             {b.status !== "cancelled" && (
               canCancel(new Date(b.starts_at)) ? (
                 <div className="mt-6">
-                  <p className="mb-3 text-xs text-muted-foreground">נותרו {businessDaysUntil(new Date(b.starts_at))} ימי עסקים — אפשר לבטל ללא עלות.</p>
+                  <p className="mb-3 text-xs text-muted-foreground">נותרו כ-{hoursUntil(new Date(b.starts_at))} שעות — אפשר לבטל עד 48 שעות מראש.</p>
                   <Button variant="destructive" className="w-full" disabled={busy} onClick={async () => {
                     if (!confirm("לבטל את ההזמנה?")) return;
                     setBusy(true);
@@ -53,7 +53,7 @@ function Manage() {
               ) : (
                 <div className="mt-6">
                   <Button disabled className="w-full" variant="secondary">ביטול ההזמנה</Button>
-                  <p className="mt-3 flex gap-2 text-sm text-accent"><AlertTriangle className="h-4 w-4 shrink-0" />מועד הביטול חלף (פחות מ-2 ימי עסקים). לתיאום חריג יש ליצור קשר ישירות עם המקום.</p>
+                  <p className="mt-3 flex gap-2 text-sm text-accent"><AlertTriangle className="h-4 w-4 shrink-0" />מועד הביטול חלף (פחות מ-48 שעות). ההזמנה תחויב בתשלום מלא.</p>
                 </div>
               )
             )}

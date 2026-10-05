@@ -14,11 +14,11 @@
 - Booking writes go through server functions in src/lib/bookings.functions.ts using the admin client; tables have no public policies — keeps customer data private.
 - Customers manage bookings via an unguessable manage_token link, no login — fast checkout.
 - Google Calendar is accessed only from src/lib/gcal.server.ts via the connector gateway — single integration point.
-- Payment is TEST MODE: /checkout-test posts `{source:"takbull", type}` to the parent; swap for the real Takbull iframe + verified server callback when credentials exist.
+- Payments are direct/offline only (Bit, bank transfer, cash, or end-of-month settlement); booking completion opens a prefilled WhatsApp confirmation — no card processor is used.
 - First signed-in user auto-becomes admin (bootstrap in getAdminStatus) — owner setup without manual SQL.
 - Customer review screenshots use the private `customer-reviews` bucket and a same-origin public image route that exposes visible review IDs only; only admins manage metadata and files — works on filtered networks without public storage permissions.
 
 - Admin server functions use requireAdmin (src/lib/admin-auth.ts): signed-in admin bearer OR HMAC-signed HttpOnly PIN cookie from /api/admin-verify (ADMIN_ACCESS_KEY) — emergency access when the auth service is blocked by network filters.
 - Browser backend calls are rewritten to the same-origin proxy /api/public/sb/* (src/lib/backend-proxy.ts) — bypasses filters that block the backend domain.
 - Admin "יומן בקתה" ledger (LedgerPanel) is the source of truth; every booking create/update/delete mirrors to its Google Sheet row via syncSheet using bookings.sheet_tab/sheet_row — Sheet is a backup, not the master.
-- Offline payment methods (Bit/transfer/cash) lock the slot immediately with status pending; only credit-card pending holds expire after 20 min.
+- Every customer payment method locks the slot immediately with status pending; administrators mark payment and receipt status in the ledger.
