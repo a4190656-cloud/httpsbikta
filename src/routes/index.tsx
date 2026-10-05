@@ -19,10 +19,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import logo from "@/assets/bikta-logo.png.asset.json";
 import {
-  DEFAULT_SETTINGS, DRINKS, priceFor, drinksTotal, hoursLabel, formatILS, formatDateTime, formatTime, hebrewDate,
-  type DrinkCart, type Settings, PAY_METHODS, PAY_METHOD_LABEL, type PayMethod,
+  DEFAULT_SETTINGS, DRINKS, priceFor, drinksTotal, drinksText, hoursLabel, formatILS, formatDateTime, formatTime, hebrewDate,
+  type DrinkCart, type Settings, PAY_METHODS, PAY_METHOD_LABEL, END_OF_MONTH_METHODS, paymentInstructions,
+  type PayMethod, type EndOfMonthMethod,
 } from "@/lib/booking-rules";
-import { getBusy, createBooking, confirmPayment, createDrinkOrder, getSettings } from "@/lib/bookings.functions";
+import { getBusy, createBooking, createDrinkOrder, getSettings } from "@/lib/bookings.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -145,7 +146,7 @@ function BookingPage() {
               {step === 1 && <StepDetails form={form} setForm={setForm} onBack={() => go(0)} onNext={() => go(2)} />}
               {step === 2 && range && (
                 <StepPay range={range} hours={hours} cart={cart} settings={settings} form={form}
-                  onBack={() => go(1)} onPaid={setDone} onOffline={(t, m) => { setOffline(m); setDone(t); }} />
+                  onBack={() => go(1)} onOffline={(t, m) => { setOffline(m); setDone(t); }} />
               )}
             </motion.div>
           </AnimatePresence>
@@ -369,56 +370,28 @@ function Field({ label, error, children }: { label: string; error?: string; chil
   return <div className="space-y-1.5"><Label>{label}</Label>{children}{error && <p className="text-xs text-destructive">{error}</p>}</div>;
 }
 
-/** Test-mode payment modal + postMessage listener. */
-function usePayment(confirmToken: (t: string) => void) {
-  const confirm = useServerFn(confirmPayment);
-  const [pay, setPay] = useState<{ token: string; amount: number } | null>(null);
-  useEffect(() => {
-    if (!pay) return;
-    const onMsg = async (e: MessageEvent) => {
-      if (e.origin !== window.location.origin || e.data?.source !== "takbull") return;
-      if (e.data.type === "success") {
-        try { const r = await confirm({ data: { token: pay.token } }); if (r.ok) { setPay(null); confirmToken(pay.token); } }
-        catch { toast.error("התשלום התקבל אך אירעה תקלה ברישום. נציג יחזור אליכם."); }
-      } else {
-        setPay(null);
-        toast(e.data.type === "cancel" ? "התשלום בוטל — ההזמנה שלכם עדיין ממתינה כאן 🌿" : "משהו השתבש בתשלום. אפשר לנסות שוב בעוד רגע.");
-      }
-    };
-    window.addEventListener("message", onMsg);
-    return () => window.removeEventListener("message", onMsg);
-  }, [pay]);
-  const modal = (
-    <AnimatePresence>
-      {pay && (
-        <motion.div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-md" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <motion.div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-card shadow-organic" initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, y: 20 }} transition={spring}>
-            <button aria-label="סגירה" onClick={() => { setPay(null); toast("התשלום בוטל 🌿"); }} className="absolute left-3 top-3 z-10 rounded-full bg-muted p-1.5"><X className="h-4 w-4" /></button>
-            <iframe title="תשלום תקבול" src={`/checkout-test?amount=${pay.amount}`} className="h-[560px] w-full border-0" />
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-  return { setPay, modal };
-}
-
 function StepPay({ range, hours, cart, settings, form, onBack, onPaid, onOffline }: {
   range: { start: string; end: string }; hours: number; cart: DrinkCart; settings: Settings; form: Form;
-  onBack: () => void; onPaid: (token: string) => void; onOffline: (token: string, method: PayMethod) => void;
+  onBack: () => void; onOffline: (token: string, method: PayMethod) => void;
 }) {
   const create = useServerFn(createBooking);
   const [loading, setLoading] = useState(false);
-  const [method, setMethod] = useState<PayMethod>("אשראי");
-  const { setPay, modal } = usePayment(onPaid);
+  const [method, setMethod] = useState<PayMethod>("ביט");
+  const [endOfMonthMethod, setEndOfMonthMethod] = useState<EndOfMonthMethod | undefined>();
+  const [agreed, setAgreed] = useState(false);
   const p = priceFor(hours, settings.hourlyRate, drinksTotal(cart, settings.drinkPrices));
 
   const start = async () => {
     setLoading(true);
     try {
-      const r = await create({ data: { startsAt: range.start, endsAt: range.end, ...form, notes: form.notes || undefined, drinks: cart, paymentMethod: method } });
-      if (method === "אשראי") setPay({ token: r.token, amount: r.total });
-      else onOffline(r.token, method);
+      const popup = window.open("about:blank", "_blank");
+      const r = await create({ data: { startsAt: range.start, endsAt: range.end, ...form, notes: form.notes || undefined, drinks: cart, paymentMethod: method, endOfMonthMethod } });
+      const dateStr = new Date(range.start).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
+      const drinkLine = drinksText(cart) ? `\nשתייה: ${drinksText(cart)}` : "";
+      const msg = `שלום, ביצעתי הזמנה בבקתה B.\nשם: ${form.fullName}\nטלפון: ${form.phone}\nתאריך: ${dateStr}\nשעות: ${formatTime(range.start)}–${formatTime(range.end)}\nסכום כולל: ${formatILS(r.total)}${drinkLine}\n\n${paymentInstructions(method, endOfMonthMethod)}`;
+      const url = `https://wa.me/972539000374?text=${encodeURIComponent(msg)}`;
+      if (popup) popup.location.href = url; else window.location.href = url;
+      onOffline(r.token, method);
     } catch (err: any) { toast.error(err?.message ?? "לא הצלחנו ליצור הזמנה"); }
     finally { setLoading(false); }
   };
@@ -453,23 +426,29 @@ function StepPay({ range, hours, cart, settings, form, onBack, onPaid, onOffline
             </motion.button>
           ))}
         </div>
-        {method !== "אשראי" && <p className="mt-2 text-xs text-muted-foreground">המועד יינעל עבורכם, ואישור סופי יינתן אחרי שליחת אסמכתה בוואטסאפ.</p>}
+        {method === "סוף חודש" && (
+          <div className="mt-4 rounded-xl border border-border bg-card p-4">
+            <div className="text-sm font-semibold">כיצד תרצו להסדיר את התשלום בסוף החודש?</div>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {END_OF_MONTH_METHODS.map((m) => <Button key={m} type="button" variant={endOfMonthMethod === m ? "default" : "outline"} onClick={() => setEndOfMonthMethod(m)}>{PAY_METHOD_LABEL[m]}</Button>)}
+            </div>
+          </div>
+        )}
+        <p className="mt-2 text-xs text-muted-foreground">המועד יינעל עבורכם, והפרטים ייפתחו לשליחה בוואטסאפ.</p>
       </div>
-      <Consent />
-      <Nav onBack={onBack} onNext={start} nextLabel={method === "אשראי" ? "לתשלום מאובטח" : "שריון המועד"} loading={loading} />
-      {modal}
+      <Consent checked={agreed} onChange={setAgreed} />
+      <Nav onBack={onBack} onNext={start} nextLabel="שריון ושליחה בוואטסאפ" disabled={!agreed || (method === "סוף חודש" && !endOfMonthMethod)} loading={loading} />
     </div>
   );
 }
 
-function Consent() {
+function Consent({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
   const l = "font-medium text-primary underline underline-offset-2";
   return (
-    <p className="mt-4 text-center text-xs text-muted-foreground">
-      בלחיצה על ביצוע תשלום, הנך מאשר/ת את{" "}
-      <a href="/terms" target="_blank" rel="noopener" className={l}>תנאי השימוש</a> ו
-      <a href="/cancellation" target="_blank" rel="noopener" className={l}>מדיניות הביטולים</a>
-    </p>
+    <label className="mt-5 flex items-start gap-3 rounded-xl border border-border bg-card p-4 text-sm">
+      <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span>קראתי ואני מאשר/ת את <a href="/terms" target="_blank" rel="noopener" className={l}>תנאי השימוש בבקתה B</a> ואת <a href="/cancellation" target="_blank" rel="noopener" className={l}>מדיניות הביטולים</a></span>
+    </label>
   );
 }
 
