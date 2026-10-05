@@ -4,7 +4,6 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
-  useRouterState,
   HeadContent,
   Scripts,
   type ErrorRouteComponent,
@@ -120,15 +119,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isCheckoutFrame = pathname.startsWith("/checkout-test");
-
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
-      {!isCheckoutFrame && <SiteFooter />}
-      {!isCheckoutFrame && <AccessibilityToolbar />}
+      <SiteFooter />
+      <AccessibilityToolbar />
       <Toaster position="top-center" richColors />
     </QueryClientProvider>
   );

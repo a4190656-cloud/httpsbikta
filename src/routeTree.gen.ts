@@ -14,7 +14,6 @@ import { Route as AccessibilityRouteImport } from './routes/accessibility'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CancellationRouteImport } from './routes/cancellation'
-import { Route as CheckoutTestRouteImport } from './routes/checkout-test'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiAdminVerifyRouteImport } from './routes/api/admin-verify'
@@ -46,11 +45,6 @@ const AuthRoute = AuthRouteImport.update({
 const CancellationRoute = CancellationRouteImport.update({
   id: '/cancellation',
   path: '/cancellation',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CheckoutTestRoute = CheckoutTestRouteImport.update({
-  id: '/checkout-test',
-  path: '/checkout-test',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -96,7 +90,6 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/cancellation': typeof CancellationRoute
-  '/checkout-test': typeof CheckoutTestRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/api/admin-verify': typeof ApiAdminVerifyRoute
@@ -111,7 +104,6 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/cancellation': typeof CancellationRoute
-  '/checkout-test': typeof CheckoutTestRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/api/admin-verify': typeof ApiAdminVerifyRoute
@@ -127,7 +119,6 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/cancellation': typeof CancellationRoute
-  '/checkout-test': typeof CheckoutTestRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/api/admin-verify': typeof ApiAdminVerifyRoute
@@ -144,7 +135,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/cancellation'
-    | '/checkout-test'
     | '/privacy'
     | '/terms'
     | '/api/admin-verify'
@@ -159,7 +149,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/cancellation'
-    | '/checkout-test'
     | '/privacy'
     | '/terms'
     | '/api/admin-verify'
@@ -174,7 +163,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/cancellation'
-    | '/checkout-test'
     | '/privacy'
     | '/terms'
     | '/api/admin-verify'
@@ -190,7 +178,6 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
   CancellationRoute: typeof CancellationRoute
-  CheckoutTestRoute: typeof CheckoutTestRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   ApiAdminVerifyRoute: typeof ApiAdminVerifyRoute
@@ -235,13 +222,6 @@ declare module '@tanstack/react-router' {
       path: '/cancellation'
       fullPath: '/cancellation'
       preLoaderRoute: typeof CancellationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/checkout-test': {
-      id: '/checkout-test'
-      path: '/checkout-test'
-      fullPath: '/checkout-test'
-      preLoaderRoute: typeof CheckoutTestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -302,7 +282,6 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   CancellationRoute: CancellationRoute,
-  CheckoutTestRoute: CheckoutTestRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   ApiAdminVerifyRoute: ApiAdminVerifyRoute,

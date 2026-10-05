@@ -19,7 +19,7 @@ export function SiteFooter() {
           ))}
         </nav>
         <p className="mt-4 leading-relaxed">
-          {BUSINESS.name} | ע.מ / ח.פ: {BUSINESS.businessId} | טלפון: <a href={`tel:${BUSINESS.phoneIntl}`} dir="ltr" className="hover:text-primary">{BUSINESS.phone}</a> | כתובת: {BUSINESS.address}
+          {BUSINESS.name} | עוסק פטור: {BUSINESS.businessId} | טלפון: <a href={`tel:${BUSINESS.phoneIntl}`} dir="ltr" className="hover:text-primary">053-9000374</a>
         </p>
         <a
           href="https://a4190656-cloud.github.io/AO/"

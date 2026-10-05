@@ -15,7 +15,7 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
         <p className="mt-2 text-muted-foreground">{doc.description}</p>
         <div className="mt-8 space-y-8">
           {doc.sections.map((s) => (
-            <section key={s.h} className="rounded-2xl border border-border bg-card p-6">
+            <section key={s.h} className="rounded-lg border border-border bg-card p-6">
               <h2 className="font-display text-xl font-semibold">{s.h}</h2>
               <ul className="mt-3 list-disc space-y-2 ps-5 leading-relaxed text-foreground/90">
                 {s.p.map((t) => <li key={t}>{t}</li>)}
