@@ -250,12 +250,16 @@ export const adminList = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ from: z.string(), to: z.string() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const [b, bl] = await Promise.all([
-      context.supabase.from("bookings").select("id, kind, purpose, starts_at, ends_at, duration_hours, full_name, phone, email, attendees, notes, status, total, drinks, payment_method, source")
+    const { gcalEvents } = await import("./gcal.server");
+    const [b, bl, ev] = await Promise.all([
+      context.supabase.from("bookings").select("id, kind, purpose, starts_at, ends_at, duration_hours, full_name, phone, email, attendees, notes, status, total, drinks, payment_method, source, google_event_id")
         .gte("starts_at", data.from).lt("starts_at", data.to).order("starts_at"),
       context.supabase.from("blocks").select("*").gte("starts_at", data.from).lt("starts_at", data.to).order("starts_at"),
+      gcalEvents(data.from, data.to),
     ]);
-    return { bookings: b.data ?? [], blocks: bl.data ?? [] };
+    const ours = new Set((b.data ?? []).map((x: any) => x.google_event_id).filter(Boolean));
+    const calendar = ev.filter((e) => !ours.has(e.id));
+    return { bookings: b.data ?? [], blocks: bl.data ?? [], calendar };
   });
 
 export const adminAddBlock = createServerFn({ method: "POST" })
