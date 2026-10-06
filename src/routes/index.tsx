@@ -660,7 +660,7 @@ function copyText(v: string, msg = "הועתק") {
   navigator.clipboard.writeText(v); toast.success(msg);
 }
 
-function PaymentDetails({ method, settlement }: { method: PayMethod; settlement?: EndOfMonthMethod }) {
+function PaymentDetails({ method, settlement }: { method: PayMethod; settlement?: EndOfMonthMethod | undefined }) {
   const eff: PayMethod = method === "סוף חודש" ? settlement ?? "סוף חודש" : method;
   if (eff === "ביט") {
     return (
