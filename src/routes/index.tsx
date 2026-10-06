@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import {
   Trees, Home, ArrowLeft, ArrowRight, UsersRound,
   Check, ShieldCheck, Clock, Loader2, CalendarDays, X, Minus, Plus, CupSoda, MessageCircle, MessageSquareQuote,
+  AlertTriangle,
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { PhotoGallery, ReviewsSection } from "@/components/MediaSections";
@@ -83,11 +84,12 @@ function BookingPage() {
   const [form, setForm] = useState<Form>({ fullName: "", phone: "", notes: "" });
   const [done, setDone] = useState<string | null>(null);
   const [offline, setOffline] = useState<PayMethod | null>(null);
+  const [settlement, setSettlement] = useState<EndOfMonthMethod | undefined>();
   const [waUrl, setWaUrl] = useState("");
   useEffect(() => {
     try { const c = JSON.parse(localStorage.getItem("bikta_customer") || "{}"); if (c.fullName || c.phone) setForm((f) => ({ ...f, fullName: f.fullName || c.fullName || "", phone: f.phone || c.phone || "" })); } catch {}
   }, []);
-  const resetAll = () => { setDone(null); setOffline(null); setRange(null); setCart({}); setStep(0); setWaUrl(""); };
+  const resetAll = () => { setDone(null); setOffline(null); setRange(null); setCart({}); setStep(0); setWaUrl(""); setSettlement(undefined); };
   const [drinksOnly, setDrinksOnly] = useState(false);
 
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); };
@@ -100,7 +102,7 @@ function BookingPage() {
   const price = priceFor(hours, settings.hourlyRate, drinksTotal(cart, settings.drinkPrices));
 
   if (done && range && offline) {
-    return <Shell><OfflineConfirm token={done} range={range} method={offline} total={price.total} name={form.fullName} waUrl={waUrl} onHome={resetAll} /><ReviewsSection /><PhotoGallery /></Shell>;
+    return <Shell><OfflineConfirm token={done} range={range} method={offline} settlement={settlement} total={price.total} name={form.fullName} waUrl={waUrl} onHome={resetAll} /><ReviewsSection /><PhotoGallery /></Shell>;
   }
   if (done && range) {
     return <Shell><Celebration token={done} startIso={range.start} hours={hours} total={price.total} name={form.fullName} /><ReviewsSection /><PhotoGallery /></Shell>;
@@ -153,7 +155,7 @@ function BookingPage() {
               {step === 1 && <StepDetails form={form} setForm={setForm} onBack={() => go(0)} onNext={() => go(2)} />}
               {step === 2 && range && (
                 <StepPay range={range} hours={hours} cart={cart} settings={settings} form={form}
-                  onBack={() => go(1)} onOffline={(t, m, u) => { setWaUrl(u); setOffline(m); setDone(t); }} />
+                  onBack={() => go(1)} onOffline={(t, m, sm, u) => { setWaUrl(u); setOffline(m); setSettlement(sm); setDone(t); }} />
               )}
             </motion.div>
           </AnimatePresence>
@@ -379,7 +381,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 
 function StepPay({ range, hours, cart, settings, form, onBack, onOffline }: {
   range: { start: string; end: string }; hours: number; cart: DrinkCart; settings: Settings; form: Form;
-  onBack: () => void; onOffline: (token: string, method: PayMethod, waUrl: string) => void;
+  onBack: () => void; onOffline: (token: string, method: PayMethod, settlement: EndOfMonthMethod | undefined, waUrl: string) => void;
 }) {
   const create = useServerFn(createBooking);
   const [loading, setLoading] = useState(false);
@@ -397,7 +399,7 @@ function StepPay({ range, hours, cart, settings, form, onBack, onOffline }: {
       const msg = `שלום, ביצעתי הזמנה בבקתה B.\nשם: ${form.fullName}\nטלפון: ${form.phone}\nתאריך: ${dateStr}\nשעות: ${formatTime(range.start)}–${formatTime(range.end)}\nסכום כולל: ${formatILS(r.total)}${drinkLine}\n\n${paymentInstructions(method, endOfMonthMethod)}`;
       const url = `https://wa.me/972539000374?text=${encodeURIComponent(msg)}`;
       saveCustomer(form.fullName, form.phone);
-      onOffline(r.token, method, url);
+      onOffline(r.token, method, endOfMonthMethod, url);
     } catch (err: any) { toast.error(err?.message ?? "לא הצלחנו ליצור הזמנה"); }
     finally { setLoading(false); }
   };
