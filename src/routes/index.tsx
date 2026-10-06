@@ -108,6 +108,7 @@ function BookingPage() {
 
   return (
     <Shell>
+      {step === 0 && (
       <section className="mx-auto max-w-6xl px-5 pb-6 pt-10 text-center">
         <motion.div initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.1 } } }}>
           <motion.p variants={fade} className="text-sm font-medium tracking-wide text-accent">בקתה עם גינה פרטית · לכל מטרה</motion.p>
