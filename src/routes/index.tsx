@@ -370,7 +370,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
   return <div className="space-y-1.5"><Label>{label}</Label>{children}{error && <p className="text-xs text-destructive">{error}</p>}</div>;
 }
 
-function StepPay({ range, hours, cart, settings, form, onBack, onPaid, onOffline }: {
+function StepPay({ range, hours, cart, settings, form, onBack, onOffline }: {
   range: { start: string; end: string }; hours: number; cart: DrinkCart; settings: Settings; form: Form;
   onBack: () => void; onOffline: (token: string, method: PayMethod) => void;
 }) {
@@ -400,7 +400,7 @@ function StepPay({ range, hours, cart, settings, form, onBack, onPaid, onOffline
     <div>
       <h2 className="font-display text-2xl font-bold">סיכום ותשלום</h2>
       <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm text-accent">
-        <ShieldCheck className="h-4 w-4" /> ביטול ללא עלות מתאפשר עד 2 ימי עסקים לפני המועד בלבד.
+        <ShieldCheck className="h-4 w-4" /> ביטול ללא עלות מתאפשר עד 48 שעות לפני המועד בלבד.
       </div>
       <div className="mt-6 rounded-2xl border border-border bg-card p-6">
         <div className="text-sm text-muted-foreground">
@@ -457,27 +457,33 @@ function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; on
   const [cart, setCart] = useState<DrinkCart>(initialCart ?? {});
   const [name, setName] = useState(""); const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false); const [ok, setOk] = useState(false);
-  const { setPay, modal } = usePayment(() => {
-    setOk(true);
-    confetti({ particleCount: 90, spread: 80, origin: { y: 0.4 }, colors: ["#2D4A32", "#8C502E", "#C9A06B"] });
-  });
+  const [method, setMethod] = useState<PayMethod>("ביט");
+  const [endOfMonthMethod, setEndOfMonthMethod] = useState<EndOfMonthMethod | undefined>();
+  const [agreed, setAgreed] = useState(false);
   const total = drinksTotal(cart, settings.drinkPrices);
   const submit = async () => {
     if (name.trim().length < 2 || !phoneRe.test(phone)) { toast.error("נא למלא שם וטלפון תקין"); return; }
+    if (method === "סוף חודש" && !endOfMonthMethod) { toast.error("יש לבחור כיצד יוסדר התשלום בסוף החודש"); return; }
     setLoading(true);
-    try { const r = await create({ data: { fullName: name, phone, drinks: cart } }); setPay({ token: r.token, amount: r.total }); }
+    try {
+      const r = await create({ data: { fullName: name, phone, drinks: cart, paymentMethod: method, endOfMonthMethod } });
+      const msg = `שלום, רכשתי שתייה בבקתה B.\nשם: ${name}\nטלפון: ${phone}\nהזמנה: ${drinksText(cart)}\nסכום כולל: ${formatILS(r.total)}\n\n${paymentInstructions(method, endOfMonthMethod)}`;
+      window.open(`https://wa.me/972539000374?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+      setOk(true);
+      confetti({ particleCount: 90, spread: 80, origin: { y: 0.4 }, colors: ["#2D4A32", "#8C502E", "#C9A06B"] });
+    }
     catch (e: any) { toast.error(e?.message ?? "לא הצלחנו ליצור הזמנה"); }
     finally { setLoading(false); }
   };
   return (
     <motion.div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 p-4 backdrop-blur-sm sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-lg rounded-3xl bg-card p-6 shadow-organic" initial={{ y: 40, scale: 0.96 }} animate={{ y: 0, scale: 1 }} exit={{ y: 40, scale: 0.96 }} transition={spring}>
+      <motion.div onClick={(e) => e.stopPropagation()} className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-card p-6 shadow-organic" initial={{ y: 40, scale: 0.96 }} animate={{ y: 0, scale: 1 }} exit={{ y: 40, scale: 0.96 }} transition={spring}>
         <button aria-label="סגירה" onClick={onClose} className="absolute left-4 top-4 rounded-full bg-muted p-1.5"><X className="h-4 w-4" /></button>
         {ok ? (
           <div className="py-8 text-center">
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring} className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-8 w-8" /></motion.div>
             <h3 className="mt-4 font-display text-2xl font-bold text-primary">לחיים! 🥤</h3>
-            <p className="mt-1 text-sm text-muted-foreground">התשלום התקבל, השתייה מחכה לכם במקרר.</p>
+            <p className="mt-1 text-sm text-muted-foreground">ההזמנה נשלחה לאישור בוואטסאפ — השתייה מחכה לכם במקרר.</p>
             <Button className="mt-6 rounded-full" onClick={onClose}>סגירה</Button>
           </div>
         ) : (
@@ -489,13 +495,34 @@ function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; on
               <Field label="שם"><Input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} /></Field>
               <Field label="טלפון"><Input dir="ltr" inputMode="tel" className="text-right" placeholder="050-1234567" value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} /></Field>
             </div>
-            <Consent />
-            <Button size="lg" className="mt-3 h-12 w-full rounded-full text-base" disabled={!total || loading} onClick={submit}>
-              {loading && <Loader2 className="h-4 w-4 animate-spin" />} לתשלום {formatILS(total)}
+            <div className="mt-4">
+              <div className="mb-2 text-sm font-semibold">אמצעי תשלום</div>
+              <div role="radiogroup" aria-label="אמצעי תשלום" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {PAY_METHODS.map((m) => (
+                  <motion.button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)}
+                    whileTap={{ scale: 0.98 }}
+                    className={`rounded-2xl border px-3 py-2.5 text-sm font-medium transition-colors ${method === m ? "border-primary bg-primary text-primary-foreground shadow-organic" : "border-border bg-card hover:border-primary/40"}`}>
+                    {PAY_METHOD_LABEL[m]}
+                  </motion.button>
+                ))}
+              </div>
+              {method === "סוף חודש" && (
+                <div className="mt-3 rounded-xl border border-border bg-card p-4">
+                  <div className="text-sm font-semibold">כיצד תרצו להסדיר את התשלום בסוף החודש?</div>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {END_OF_MONTH_METHODS.map((m) => <Button key={m} type="button" variant={endOfMonthMethod === m ? "default" : "outline"} onClick={() => setEndOfMonthMethod(m)}>{PAY_METHOD_LABEL[m]}</Button>)}
+                  </div>
+                </div>
+              )}
+              <p className="mt-2 text-xs text-muted-foreground">ההזמנה תישלח לאישור בוואטסאפ עם הוראות התשלום.</p>
+            </div>
+            <Consent checked={agreed} onChange={setAgreed} />
+            <Button size="lg" className="mt-3 h-12 w-full rounded-full text-base"
+              disabled={!total || loading || !agreed || (method === "סוף חודש" && !endOfMonthMethod)} onClick={submit}>
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />} שריון ושליחה בוואטסאפ {formatILS(total)}
             </Button>
           </>
         )}
-        {modal}
       </motion.div>
     </motion.div>
   );
@@ -541,7 +568,7 @@ function Celebration({ token, startIso, hours, total, name }: { token: string; s
         </div>
         <div className="mt-6 rounded-2xl border border-border bg-card p-4 text-sm">
           <div className="font-semibold">קישור אישי לניהול ההזמנה</div>
-          <p className="mt-1 text-xs text-muted-foreground">שמרו אותו — דרכו אפשר לבטל עד 2 ימי עסקים לפני המועד.</p>
+          <p className="mt-1 text-xs text-muted-foreground">שמרו אותו — דרכו אפשר לבטל עד 48 שעות לפני המועד.</p>
           <div className="mt-3 flex gap-2">
             <Input readOnly dir="ltr" value={manageUrl} className="text-xs" />
             <Button variant="secondary" onClick={() => { navigator.clipboard.writeText(manageUrl); toast.success("הקישור הועתק"); }}>העתקה</Button>
