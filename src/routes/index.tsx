@@ -137,6 +137,7 @@ function BookingPage() {
           </motion.div>
         </motion.div>
       </section>
+      )}
 
       <motion.section className="mx-auto max-w-4xl px-5 pb-24" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
         <Stepper step={step} />
