@@ -83,6 +83,11 @@ function BookingPage() {
   const [form, setForm] = useState<Form>({ fullName: "", phone: "", notes: "" });
   const [done, setDone] = useState<string | null>(null);
   const [offline, setOffline] = useState<PayMethod | null>(null);
+  const [waUrl, setWaUrl] = useState("");
+  useEffect(() => {
+    try { const c = JSON.parse(localStorage.getItem("bikta_customer") || "{}"); if (c.fullName || c.phone) setForm((f) => ({ ...f, fullName: f.fullName || c.fullName || "", phone: f.phone || c.phone || "" })); } catch {}
+  }, []);
+  const resetAll = () => { setDone(null); setOffline(null); setRange(null); setCart({}); setStep(0); setWaUrl(""); };
   const [drinksOnly, setDrinksOnly] = useState(false);
 
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); };
@@ -95,7 +100,7 @@ function BookingPage() {
   const price = priceFor(hours, settings.hourlyRate, drinksTotal(cart, settings.drinkPrices));
 
   if (done && range && offline) {
-    return <Shell><OfflineConfirm token={done} range={range} method={offline} total={price.total} name={form.fullName} /><ReviewsSection /><PhotoGallery /></Shell>;
+    return <Shell><OfflineConfirm token={done} range={range} method={offline} total={price.total} name={form.fullName} waUrl={waUrl} onHome={resetAll} /><ReviewsSection /><PhotoGallery /></Shell>;
   }
   if (done && range) {
     return <Shell><Celebration token={done} startIso={range.start} hours={hours} total={price.total} name={form.fullName} /><ReviewsSection /><PhotoGallery /></Shell>;
@@ -146,7 +151,7 @@ function BookingPage() {
               {step === 1 && <StepDetails form={form} setForm={setForm} onBack={() => go(0)} onNext={() => go(2)} />}
               {step === 2 && range && (
                 <StepPay range={range} hours={hours} cart={cart} settings={settings} form={form}
-                  onBack={() => go(1)} onOffline={(t, m) => { setOffline(m); setDone(t); }} />
+                  onBack={() => go(1)} onOffline={(t, m, u) => { setWaUrl(u); setOffline(m); setDone(t); }} />
               )}
             </motion.div>
           </AnimatePresence>
@@ -372,7 +377,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 
 function StepPay({ range, hours, cart, settings, form, onBack, onOffline }: {
   range: { start: string; end: string }; hours: number; cart: DrinkCart; settings: Settings; form: Form;
-  onBack: () => void; onOffline: (token: string, method: PayMethod) => void;
+  onBack: () => void; onOffline: (token: string, method: PayMethod, waUrl: string) => void;
 }) {
   const create = useServerFn(createBooking);
   const [loading, setLoading] = useState(false);
@@ -384,14 +389,13 @@ function StepPay({ range, hours, cart, settings, form, onBack, onOffline }: {
   const start = async () => {
     setLoading(true);
     try {
-      const popup = window.open("about:blank", "_blank");
       const r = await create({ data: { startsAt: range.start, endsAt: range.end, ...form, notes: form.notes || undefined, drinks: cart, paymentMethod: method, endOfMonthMethod } });
       const dateStr = new Date(range.start).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
       const drinkLine = drinksText(cart) ? `\nשתייה: ${drinksText(cart)}` : "";
       const msg = `שלום, ביצעתי הזמנה בבקתה B.\nשם: ${form.fullName}\nטלפון: ${form.phone}\nתאריך: ${dateStr}\nשעות: ${formatTime(range.start)}–${formatTime(range.end)}\nסכום כולל: ${formatILS(r.total)}${drinkLine}\n\n${paymentInstructions(method, endOfMonthMethod)}`;
       const url = `https://wa.me/972539000374?text=${encodeURIComponent(msg)}`;
-      if (popup) popup.location.href = url; else window.location.href = url;
-      onOffline(r.token, method);
+      saveCustomer(form.fullName, form.phone);
+      onOffline(r.token, method, url);
     } catch (err: any) { toast.error(err?.message ?? "לא הצלחנו ליצור הזמנה"); }
     finally { setLoading(false); }
   };
@@ -434,10 +438,10 @@ function StepPay({ range, hours, cart, settings, form, onBack, onOffline }: {
             </div>
           </div>
         )}
-        <p className="mt-2 text-xs text-muted-foreground">המועד יינעל עבורכם, והפרטים ייפתחו לשליחה בוואטסאפ.</p>
+        <p className="mt-2 text-xs text-muted-foreground">המועד יינעל עבורכם מיד. במסך הבא תוכלו לשלוח את פרטי ההזמנה בוואטסאפ.</p>
       </div>
       <Consent checked={agreed} onChange={setAgreed} />
-      <Nav onBack={onBack} onNext={start} nextLabel="שריון ושליחה בוואטסאפ" disabled={!agreed || (method === "סוף חודש" && !endOfMonthMethod)} loading={loading} />
+      <Nav onBack={onBack} onNext={start} nextLabel="אישור ושריון ההזמנה" disabled={!agreed || (method === "סוף חודש" && !endOfMonthMethod)} loading={loading} />
     </div>
   );
 }
@@ -456,7 +460,8 @@ function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; on
   const create = useServerFn(createDrinkOrder);
   const [cart, setCart] = useState<DrinkCart>(initialCart ?? {});
   const [name, setName] = useState(""); const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false); const [ok, setOk] = useState(false);
+  const [loading, setLoading] = useState(false); const [ok, setOk] = useState(false); const [wa, setWa] = useState("");
+  useEffect(() => { try { const c = JSON.parse(localStorage.getItem("bikta_customer") || "{}"); if (c.fullName) setName(c.fullName); if (c.phone) setPhone(c.phone); } catch {} }, []);
   const [method, setMethod] = useState<PayMethod>("ביט");
   const [endOfMonthMethod, setEndOfMonthMethod] = useState<EndOfMonthMethod | undefined>();
   const [agreed, setAgreed] = useState(false);
@@ -468,7 +473,8 @@ function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; on
     try {
       const r = await create({ data: { fullName: name, phone, drinks: cart, paymentMethod: method, endOfMonthMethod } });
       const msg = `שלום, רכשתי שתייה בבקתה B.\nשם: ${name}\nטלפון: ${phone}\nהזמנה: ${drinksText(cart)}\nסכום כולל: ${formatILS(r.total)}\n\n${paymentInstructions(method, endOfMonthMethod)}`;
-      window.open(`https://wa.me/972539000374?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+      setWa(`https://wa.me/972539000374?text=${encodeURIComponent(msg)}`);
+      saveCustomer(name, phone);
       setOk(true);
       confetti({ particleCount: 90, spread: 80, origin: { y: 0.4 }, colors: ["#2D4A32", "#8C502E", "#C9A06B"] });
     }
@@ -482,9 +488,10 @@ function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; on
         {ok ? (
           <div className="py-8 text-center">
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring} className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-8 w-8" /></motion.div>
-            <h3 className="mt-4 font-display text-2xl font-bold text-primary">לחיים! 🥤</h3>
-            <p className="mt-1 text-sm text-muted-foreground">ההזמנה נשלחה לאישור בוואטסאפ — השתייה מחכה לכם במקרר.</p>
-            <Button className="mt-6 rounded-full" onClick={onClose}>סגירה</Button>
+            <h3 className="mt-4 font-display text-2xl font-bold text-primary">ההזמנה נקלטה בהצלחה! 🥤</h3>
+            <p className="mt-1 text-sm text-muted-foreground">השתייה מחכה לכם במקרר. לחיים!</p>
+            <a href={wa} target="_blank" rel="noopener noreferrer" className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 font-bold text-primary-foreground shadow-organic"><MessageCircle className="h-5 w-5" /> שלח פרטי הזמנה בוואטסאפ</a>
+            <Button variant="outline" className="mt-3 rounded-full" onClick={onClose}>סגירה</Button>
           </div>
         ) : (
           <>
@@ -519,7 +526,7 @@ function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; on
             <Consent checked={agreed} onChange={setAgreed} />
             <Button size="lg" className="mt-3 h-12 w-full rounded-full text-base"
               disabled={!total || loading || !agreed || (method === "סוף חודש" && !endOfMonthMethod)} onClick={submit}>
-              {loading && <Loader2 className="h-4 w-4 animate-spin" />} שריון ושליחה בוואטסאפ {formatILS(total)}
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />} אישור הזמנה {formatILS(total)}
             </Button>
           </>
         )}
@@ -580,26 +587,29 @@ function Celebration({ token, startIso, hours, total, name }: { token: string; s
   );
 }
 
-function OfflineConfirm({ token, range, method, total, name }: { token: string; range: { start: string; end: string }; method: PayMethod; total: number; name: string }) {
-  useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); }, []);
-  const dateStr = new Date(range.start).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
-  const msg = `שלום, ביצעתי הרגע הזמנה בבקתה B עבור ${name} בתאריך ${dateStr} בין השעות ${formatTime(range.start)}-${formatTime(range.end)}. הסכום לתשלום הוא ${formatILS(total)} ובחרתי לשלם באמצעות ${PAY_METHOD_LABEL[method]}. אשמח לקבל פרטים לביצוע ההעברה / לשלוח אסמכתה. תודה!`;
-  const wa = `https://wa.me/972539000374?text=${encodeURIComponent(msg)}`;
+function saveCustomer(fullName: string, phone: string) {
+  try { localStorage.setItem("bikta_customer", JSON.stringify({ fullName, phone })); } catch {}
+}
+
+function OfflineConfirm({ token, range, method, total, name, waUrl, onHome }: { token: string; range: { start: string; end: string }; method: PayMethod; total: number; name: string; waUrl: string; onHome: () => void }) {
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+    confetti({ particleCount: 120, spread: 90, origin: { y: 0.35 }, colors: ["#2D4A32", "#8C502E", "#C9A06B"] });
+  }, []);
   return (
     <section className="mx-auto max-w-xl px-5 py-14 text-center">
-      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring} className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-organic">
-        <Clock className="h-10 w-10" />
-      </motion.div>
-      <h1 className="mt-6 font-display text-3xl font-bold text-primary">המועד שוריין, {name.split(" ")[0]}</h1>
-      <p className="mt-1 text-sm text-muted-foreground">סטטוס: ממתין לתשלום / אישור</p>
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-        className="mt-6 rounded-2xl border-2 border-accent bg-accent/10 p-5 text-right text-base font-bold leading-relaxed text-foreground">
-        שים לב: ההזמנה ננעלה זמנית. חובה לדווח ולשלוח אלינו אסמכתת תשלום (או תיאום תשלום במזומן) בוואטסאפ לצורך אישור סופי של התור!
-      </motion.div>
-      <motion.a href={wa} target="_blank" rel="noopener noreferrer" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-organic">
-        <MessageCircle className="h-5 w-5" /> מעבר לוואטסאפ לשליחת אסמכתא / קבלת פרטי תשלום
-      </motion.a>
+      <div className="relative mx-auto h-36 w-36">
+        {[0, 1].map((i) => (
+          <motion.span key={i} className="absolute inset-0 rounded-full border-2 border-primary"
+            initial={{ scale: 0.6, opacity: 0.7 }} animate={{ scale: 1.5, opacity: 0 }} transition={{ duration: 2, repeat: Infinity, delay: i * 0.8 }} />
+        ))}
+        <motion.div className="absolute inset-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-organic"
+          initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 260, damping: 14 }}>
+          <Check className="h-14 w-14" strokeWidth={3.5} />
+        </motion.div>
+      </div>
+      <h1 className="mt-6 font-display text-3xl font-bold text-primary">ההזמנה נקלטה בהצלחה!</h1>
+      <p className="mt-2 text-muted-foreground">תודה {name.split(" ")[0]}, המועד שמור עבורכם. נתראה בבקתה 🌿</p>
       <div className="glass mt-6 rounded-3xl p-5 text-right">
         <dl className="space-y-2 text-sm">
           <Row k="מועד" v={`${formatDateTime(range.start)}–${formatTime(range.end)}`} />
@@ -607,8 +617,17 @@ function OfflineConfirm({ token, range, method, total, name }: { token: string; 
           <Row k="אמצעי תשלום" v={PAY_METHOD_LABEL[method]} />
           <Row k="סכום לתשלום" v={formatILS(total)} />
         </dl>
-        <Link to="/manage/$token" params={{ token }} className="mt-4 inline-block text-sm text-accent underline-offset-4 hover:underline">לניהול ההזמנה</Link>
+        <p className="mt-4 rounded-xl bg-muted/60 p-3 text-xs leading-relaxed text-muted-foreground">שלחו לנו את פרטי ההזמנה בוואטסאפ (ואם שילמתם בביט או בהעברה – צרפו צילום אישור).</p>
+        <Link to="/manage/$token" params={{ token }} className="mt-3 inline-block text-sm text-accent underline-offset-4 hover:underline">לניהול ההזמנה</Link>
       </div>
+      <motion.a href={waUrl} target="_blank" rel="noopener noreferrer" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-organic">
+        <MessageCircle className="h-5 w-5" /> שלח פרטי הזמנה בוואטסאפ
+      </motion.a>
+      <motion.button type="button" onClick={onHome} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
+        className="fixed bottom-24 left-1/2 z-40 -translate-x-1/2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold text-primary shadow-organic">
+        חזרה לעמוד הראשי
+      </motion.button>
     </section>
   );
 }
