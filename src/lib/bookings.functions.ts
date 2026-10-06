@@ -250,6 +250,8 @@ export const adminList = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ from: z.string(), to: z.string() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    const months = new Set([jlmMonth(data.from), jlmMonth(new Date(new Date(data.to).getTime() - 1).toISOString())]);
+    for (const mo of months) await importSheetMonth(mo);
     const { gcalEvents } = await import("./gcal.server");
     const [b, bl, ev] = await Promise.all([
       context.supabase.from("bookings").select("id, kind, purpose, starts_at, ends_at, duration_hours, full_name, phone, email, attendees, notes, status, total, drinks, payment_method, source, google_event_id")
@@ -440,11 +442,79 @@ export const adminDeleteReview = createServerFn({ method: "POST" })
 // ---------- Ledger ("יומן בקתה") ----------
 const jlmMonth = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit" }).format(new Date(iso));
 
+
+// ---------- Sheet -> site import ----------
+const truthy = (v: string) => /^(true|כן|v|✓|✔|1|yes)$/i.test(v.trim());
+const parseNum = (v: string) => { const n = Number(String(v).replace(/[^\d.-]/g, "")); return Number.isFinite(n) ? n : 0; };
+function statusFromSheet(label: string, paid: boolean, receipt: boolean) {
+  const hit = Object.entries(STATUS_LABEL).find(([, v]) => v === label.trim());
+  if (hit) return hit[0];
+  if (paid && receipt) return "invoiced";
+  return paid ? "paid" : "pending";
+}
+
+/** Pulls the month's sheet tab into the database: edited rows update bookings, new rows are added, cleared rows cancel. */
+async function importSheetMonth(month: string) {
+  try {
+    const [y, m] = month.split("-").map(Number) as [number, number];
+    const tab = String(m).padStart(2, "0");
+    const { readMonthRows } = await import("./sheets.server");
+    const rows = await readMonthRows(tab);
+    if (!rows) return;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: linked } = await supabaseAdmin.from("bookings")
+      .select("id, full_name, phone, total, payment_method, status, receipt_issued, paid_at, sheet_row, kind")
+      .eq("sheet_tab", tab).gte("starts_at", new Date(Date.UTC(y, m - 2, 20)).toISOString()).lt("starts_at", new Date(Date.UTC(y, m, 10)).toISOString());
+    const byRow = new Map((linked ?? []).map((b) => [b.sheet_row, b]));
+    for (const { row, cells } of rows) {
+      const [, date = "", nameCell = "", hoursCell = "", drinksCell = "", paidDateCell = "", method = "", amountCell = "", paidCell = "", receiptCell = "", statusCell = ""] = cells;
+      const b = byRow.get(row);
+      if (!nameCell) {
+        if (b && !FREE_STATUSES.includes(b.status)) await supabaseAdmin.from("bookings").update({ status: "cancelled" }).eq("id", b.id);
+        continue;
+      }
+      const phoneMatch = nameCell.match(/(\+?\d[\d-]{7,})\s*$/);
+      const phone = phoneMatch ? phoneMatch[1]! : "";
+      const fullName = (phoneMatch ? nameCell.slice(0, phoneMatch.index) : nameCell).trim() || nameCell;
+      const paid = truthy(paidCell), receipt = truthy(receiptCell);
+      const status = statusFromSheet(statusCell, paid, receipt);
+      const total = parseNum(amountCell);
+      const [pd, pm] = paidDateCell.split("/").map(Number);
+      const paidAt = paid && pd && pm ? new Date(Date.UTC(y, pm - 1, pd, 9)).toISOString() : null;
+      if (b) {
+        const patch: Record<string, unknown> = {};
+        if (fullName !== b.full_name) patch.full_name = fullName;
+        if (phone && phone !== b.phone) patch.phone = phone;
+        if (total !== Number(b.total)) { patch.total = total; patch.subtotal = total; patch.vat = 0; }
+        if (method && method !== b.payment_method) patch.payment_method = method;
+        if (status !== b.status) patch.status = status;
+        if (receipt !== !!b.receipt_issued) patch.receipt_issued = receipt;
+        if (paid && !b.paid_at && paidAt) patch.paid_at = paidAt;
+        if (!paid && b.paid_at) patch.paid_at = null;
+        if (Object.keys(patch).length) await supabaseAdmin.from("bookings").update(patch as never).eq("id", b.id);
+        continue;
+      }
+      const [d, mo] = date.split("/").map(Number);
+      const start = new Date(Date.UTC(y, (mo || m) - 1, d || 1, 9));
+      const hours = parseNum(hoursCell);
+      await supabaseAdmin.from("bookings").insert({
+        kind: "sheet", source: "sheet", purpose: "other", full_name: fullName, phone, email: "",
+        starts_at: start.toISOString(), ends_at: new Date(start.getTime() + hours * 3600_000).toISOString(),
+        hours: Math.ceil(hours), duration_hours: hours, subtotal: total, vat: 0, total,
+        notes: drinksCell ? `שתייה: ${drinksCell}` : "נוסף מהגיליון",
+        payment_method: method || "אחר", status, receipt_issued: receipt, paid_at: paidAt,
+        manage_token: crypto.randomUUID().replace(/-/g, ""), sheet_tab: tab, sheet_row: row,
+      } as never);
+    }
+  } catch (e) { console.error("sheet import", e); }
+}
+
 export const adminLedger = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .inputValidator((d) => z.object({ month: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    await importSheetMonth(data.month);
     const [y, m] = data.month.split("-").map(Number) as [number, number];
     const from = new Date(Date.UTC(y, m - 1, 1) - 3 * 3600_000).toISOString();
     const to = new Date(Date.UTC(y, m, 1) + 3 * 3600_000).toISOString();
