@@ -113,7 +113,7 @@ export const createBooking = createServerFn({ method: "POST" })
       drinks: cart, drinks_total: p.drinks,
       payment_method: paymentRecordMethod(data.paymentMethod ?? "ביט", data.endOfMonthMethod),
     }).select("*").single();
-    if (error) throw new Error("לא הצלחנו לשמור את ההזמנה");
+    if (error) { console.error("booking insert failed", error); throw new Error("לא הצלחנו לשמור את ההזמנה"); }
     const eventId = await gcalFor(row as unknown as BookingRow);
     if (eventId) await supabaseAdmin.from("bookings").update({ google_event_id: eventId }).eq("id", row.id);
     await syncSheet(row as unknown as BookingRow);
@@ -143,7 +143,7 @@ export const createDrinkOrder = createServerFn({ method: "POST" })
       subtotal: v.subtotal, vat: v.vat, total, manage_token: token, drinks: data.drinks, drinks_total: total,
       payment_method: paymentRecordMethod(data.paymentMethod, data.endOfMonthMethod),
     }).select("*").single();
-    if (error) throw new Error("לא הצלחנו לשמור את ההזמנה");
+    if (error) { console.error("booking insert failed", error); throw new Error("לא הצלחנו לשמור את ההזמנה"); }
     await syncSheet(row as unknown as BookingRow);
     return { token, total };
   });
