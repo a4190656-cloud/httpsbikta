@@ -254,11 +254,33 @@ export const adminList = createServerFn({ method: "POST" })
     for (const mo of months) await importSheetMonth(mo);
     const { gcalEvents } = await import("./gcal.server");
     const [b, bl, ev] = await Promise.all([
-      context.supabase.from("bookings").select("id, kind, purpose, starts_at, ends_at, duration_hours, full_name, phone, email, attendees, notes, status, total, drinks, payment_method, source, google_event_id")
+      context.supabase.from("bookings").select("id, kind, purpose, starts_at, ends_at, duration_hours, full_name, phone, email, attendees, notes, status, total, drinks, payment_method, source, google_event_id, sheet_tab, sheet_row, receipt_issued, paid_at")
         .gte("starts_at", data.from).lt("starts_at", data.to).order("starts_at"),
       context.supabase.from("blocks").select("*").gte("starts_at", data.from).lt("starts_at", data.to).order("starts_at"),
       gcalEvents(data.from, data.to),
     ]);
+    // Calendar -> site: moved events update the booking time, deleted events cancel it.
+    const evById = new Map(ev.map((e) => [e.id, e]));
+    const { gcalGet } = await import("./gcal.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    for (const bk of (b.data ?? []) as any[]) {
+      if (!bk.google_event_id || bk.kind !== "booking" || FREE_STATUSES.includes(bk.status)) continue;
+      const found = evById.get(bk.google_event_id);
+      const cur = found ? { start: found.start, end: found.end } : await gcalGet(bk.google_event_id);
+      if (cur === undefined) continue;
+      if (cur === null) {
+        await supabaseAdmin.from("bookings").update({ status: "cancelled" }).eq("id", bk.id);
+        bk.status = "cancelled";
+        await syncSheet({ ...bk, status: "cancelled" } as BookingRow);
+        continue;
+      }
+      const s = new Date(cur.start).toISOString(), e = new Date(cur.end).toISOString();
+      if (s !== new Date(bk.starts_at).toISOString() || e !== new Date(bk.ends_at).toISOString()) {
+        const dur = Math.round(((new Date(e).getTime() - new Date(s).getTime()) / 3600_000) * 2) / 2;
+        await supabaseAdmin.from("bookings").update({ starts_at: s, ends_at: e, duration_hours: dur, hours: Math.ceil(dur) }).eq("id", bk.id);
+        Object.assign(bk, { starts_at: s, ends_at: e, duration_hours: dur });
+      }
+    }
     const ours = new Set((b.data ?? []).map((x: any) => x.google_event_id).filter(Boolean));
     const calendar = ev.filter((e) => !ours.has(e.id));
     return { bookings: b.data ?? [], blocks: bl.data ?? [], calendar };

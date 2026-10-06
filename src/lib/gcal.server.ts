@@ -66,3 +66,16 @@ export async function gcalDelete(id: string) {
   const res = await fetch(`${GATEWAY}/calendars/primary/events/${encodeURIComponent(id)}`, { method: "DELETE", headers: h });
   if (!res.ok && res.status !== 410) console.error(`Google delete failed [${res.status}]: ${await res.text()}`);
 }
+
+/** Single event lookup: returns null when deleted/cancelled, undefined when the lookup itself failed. */
+export async function gcalGet(id: string): Promise<{ start: string; end: string } | null | undefined> {
+  const h = headers();
+  if (!h) return undefined;
+  const res = await fetch(`${GATEWAY}/calendars/primary/events/${encodeURIComponent(id)}`, { headers: h });
+  if (res.status === 404 || res.status === 410) return null;
+  if (!res.ok) { console.error(`Google get event failed [${res.status}]: ${await res.text()}`); return undefined; }
+  const e = (await res.json()) as { status?: string; start?: { dateTime?: string }; end?: { dateTime?: string } };
+  if (e.status === "cancelled") return null;
+  if (!e.start?.dateTime || !e.end?.dateTime) return undefined;
+  return { start: e.start.dateTime, end: e.end.dateTime };
+}
