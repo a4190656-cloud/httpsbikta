@@ -13,7 +13,7 @@
 
 - Booking writes go through server functions in src/lib/bookings.functions.ts using the admin client; tables have no public policies — keeps customer data private.
 - Customers manage bookings via an unguessable manage_token link, no login — fast checkout.
-- Google Calendar is accessed only from src/lib/gcal.server.ts via the connector gateway — single integration point.
+- Google Calendar is accessed only from src/lib/gcal.server.ts via the connector gateway; opening the admin calendar pulls linked-event moves/deletions back into bookings — single integration point, calendar edits stay in sync.
 - Payments are direct/offline only (Bit, bank transfer, cash, or end-of-month settlement); booking completion opens a prefilled WhatsApp confirmation — no card processor is used.
 - First signed-in user auto-becomes admin (bootstrap in getAdminStatus) — owner setup without manual SQL.
 - Customer review screenshots use the private `customer-reviews` bucket and a same-origin public image route that exposes visible review IDs only; only admins manage metadata and files — works on filtered networks without public storage permissions.

@@ -254,7 +254,7 @@ export const adminList = createServerFn({ method: "POST" })
     for (const mo of months) await importSheetMonth(mo);
     const { gcalEvents } = await import("./gcal.server");
     const [b, bl, ev] = await Promise.all([
-      context.supabase.from("bookings").select("id, kind, purpose, starts_at, ends_at, duration_hours, full_name, phone, email, attendees, notes, status, total, drinks, payment_method, source, google_event_id")
+      context.supabase.from("bookings").select("id, kind, purpose, starts_at, ends_at, duration_hours, full_name, phone, email, attendees, notes, status, total, drinks, payment_method, source, google_event_id, sheet_tab, sheet_row, receipt_issued, paid_at")
         .gte("starts_at", data.from).lt("starts_at", data.to).order("starts_at"),
       context.supabase.from("blocks").select("*").gte("starts_at", data.from).lt("starts_at", data.to).order("starts_at"),
       gcalEvents(data.from, data.to),
