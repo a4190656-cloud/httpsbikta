@@ -96,6 +96,12 @@ function Admin() {
                   <button aria-label="הסרת חסימה" onClick={async () => { await removeBlock({ data: { id: b.id } }); qc.invalidateQueries({ queryKey: ["admin"] }); }}><Trash2 className="h-3 w-3" /></button>
                 </div>
               ))}
+              {(q.data?.calendar ?? []).filter((c: any) => sameDay(c.start, d)).map((c: any) => (
+                <div key={c.id} className="rounded-lg border border-accent/40 bg-accent/10 p-2 text-xs" title="אירוע מהיומן — חוסם את השעות באתר">
+                  <div className="font-semibold">{formatTime(c.start)}–{formatTime(c.end)} · 📅 יומן</div>
+                  <div>{c.summary}</div>
+                </div>
+              ))}
               {bookings.filter((b: any) => sameDay(b.starts_at, d)).map((b: any) => (
                 <div key={b.id} className={`rounded-lg p-2 text-xs ${STATUS_CLS[b.status]}`} title={`${b.phone} · ${b.email}${b.notes ? " · " + b.notes : ""}`}>
                   <div className="font-semibold">{formatTime(b.starts_at)}–{formatTime(b.ends_at)}</div>

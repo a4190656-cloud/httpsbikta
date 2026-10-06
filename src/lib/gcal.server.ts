@@ -23,6 +23,21 @@ export async function gcalBusy(timeMin: string, timeMax: string): Promise<{ star
   return data.calendars?.primary?.busy ?? [];
 }
 
+/** Events in the calendar (incl. ones added manually), for the admin view. */
+export async function gcalEvents(timeMin: string, timeMax: string): Promise<{ id: string; summary: string; start: string; end: string }[]> {
+  const h = headers();
+  if (!h) return [];
+  const q = new URLSearchParams({ timeMin, timeMax, singleEvents: "true", orderBy: "startTime", maxResults: "250" });
+  const res = await fetch(`${GATEWAY}/calendars/primary/events?${q}`, { headers: h });
+  if (!res.ok) { console.error(`Google events failed [${res.status}]: ${await res.text()}`); return []; }
+  const data = (await res.json()) as { items?: { id: string; summary?: string; status?: string; start?: { dateTime?: string; date?: string }; end?: { dateTime?: string; date?: string } }[] };
+  return (data.items ?? []).filter((e) => e.status !== "cancelled").map((e) => ({
+    id: e.id, summary: e.summary ?? "אירוע ביומן",
+    start: e.start?.dateTime ?? `${e.start?.date}T00:00:00+03:00`,
+    end: e.end?.dateTime ?? `${e.end?.date}T00:00:00+03:00`,
+  }));
+}
+
 export async function gcalCreate(ev: {
   summary: string; description: string; start: string; end: string;
 }): Promise<string | null> {
