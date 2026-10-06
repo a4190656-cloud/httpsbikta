@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import {
   Trees, Home, ArrowLeft, ArrowRight, UsersRound,
   Check, ShieldCheck, Clock, Loader2, CalendarDays, X, Minus, Plus, CupSoda, MessageCircle, MessageSquareQuote,
+  AlertTriangle,
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { PhotoGallery, ReviewsSection } from "@/components/MediaSections";
@@ -83,11 +84,12 @@ function BookingPage() {
   const [form, setForm] = useState<Form>({ fullName: "", phone: "", notes: "" });
   const [done, setDone] = useState<string | null>(null);
   const [offline, setOffline] = useState<PayMethod | null>(null);
+  const [settlement, setSettlement] = useState<EndOfMonthMethod | undefined>();
   const [waUrl, setWaUrl] = useState("");
   useEffect(() => {
     try { const c = JSON.parse(localStorage.getItem("bikta_customer") || "{}"); if (c.fullName || c.phone) setForm((f) => ({ ...f, fullName: f.fullName || c.fullName || "", phone: f.phone || c.phone || "" })); } catch {}
   }, []);
-  const resetAll = () => { setDone(null); setOffline(null); setRange(null); setCart({}); setStep(0); setWaUrl(""); };
+  const resetAll = () => { setDone(null); setOffline(null); setRange(null); setCart({}); setStep(0); setWaUrl(""); setSettlement(undefined); };
   const [drinksOnly, setDrinksOnly] = useState(false);
 
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); };
@@ -100,7 +102,7 @@ function BookingPage() {
   const price = priceFor(hours, settings.hourlyRate, drinksTotal(cart, settings.drinkPrices));
 
   if (done && range && offline) {
-    return <Shell><OfflineConfirm token={done} range={range} method={offline} total={price.total} name={form.fullName} waUrl={waUrl} onHome={resetAll} /><ReviewsSection /><PhotoGallery /></Shell>;
+    return <Shell><OfflineConfirm token={done} range={range} method={offline} settlement={settlement} total={price.total} name={form.fullName} waUrl={waUrl} onHome={resetAll} /><ReviewsSection /><PhotoGallery /></Shell>;
   }
   if (done && range) {
     return <Shell><Celebration token={done} startIso={range.start} hours={hours} total={price.total} name={form.fullName} /><ReviewsSection /><PhotoGallery /></Shell>;
@@ -153,7 +155,7 @@ function BookingPage() {
               {step === 1 && <StepDetails form={form} setForm={setForm} onBack={() => go(0)} onNext={() => go(2)} />}
               {step === 2 && range && (
                 <StepPay range={range} hours={hours} cart={cart} settings={settings} form={form}
-                  onBack={() => go(1)} onOffline={(t, m, u) => { setWaUrl(u); setOffline(m); setDone(t); }} />
+                  onBack={() => go(1)} onOffline={(t, m, sm, u) => { setWaUrl(u); setOffline(m); setSettlement(sm); setDone(t); }} />
               )}
             </motion.div>
           </AnimatePresence>
@@ -379,7 +381,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 
 function StepPay({ range, hours, cart, settings, form, onBack, onOffline }: {
   range: { start: string; end: string }; hours: number; cart: DrinkCart; settings: Settings; form: Form;
-  onBack: () => void; onOffline: (token: string, method: PayMethod, waUrl: string) => void;
+  onBack: () => void; onOffline: (token: string, method: PayMethod, settlement: EndOfMonthMethod | undefined, waUrl: string) => void;
 }) {
   const create = useServerFn(createBooking);
   const [loading, setLoading] = useState(false);
@@ -397,7 +399,7 @@ function StepPay({ range, hours, cart, settings, form, onBack, onOffline }: {
       const msg = `שלום, ביצעתי הזמנה בבקתה B.\nשם: ${form.fullName}\nטלפון: ${form.phone}\nתאריך: ${dateStr}\nשעות: ${formatTime(range.start)}–${formatTime(range.end)}\nסכום כולל: ${formatILS(r.total)}${drinkLine}\n\n${paymentInstructions(method, endOfMonthMethod)}`;
       const url = `https://wa.me/972539000374?text=${encodeURIComponent(msg)}`;
       saveCustomer(form.fullName, form.phone);
-      onOffline(r.token, method, url);
+      onOffline(r.token, method, endOfMonthMethod, url);
     } catch (err: any) { toast.error(err?.message ?? "לא הצלחנו ליצור הזמנה"); }
     finally { setLoading(false); }
   };
@@ -492,7 +494,18 @@ function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; on
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring} className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-8 w-8" /></motion.div>
             <h3 className="mt-4 font-display text-2xl font-bold text-primary">ההזמנה נקלטה בהצלחה! 🥤</h3>
             <p className="mt-1 text-sm text-muted-foreground">השתייה מחכה לכם במקרר. לחיים!</p>
-            <a href={wa} target="_blank" rel="noopener noreferrer" className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 font-bold text-primary-foreground shadow-organic"><MessageCircle className="h-5 w-5" /> שלח פרטי הזמנה בוואטסאפ</a>
+            <div className="mt-4 text-right"><PaymentDetails method={method} settlement={endOfMonthMethod} /></div>
+            <div className="mt-4 rounded-2xl border-2 border-destructive bg-destructive/10 p-3 text-right">
+              <p className="flex items-center justify-center gap-2 text-center font-display text-base font-bold text-destructive">
+                <AlertTriangle className="h-4 w-4 shrink-0" /> חובה לשלוח לנו אסמכתא על התשלום!
+              </p>
+              <p className="mt-1 text-sm font-semibold leading-relaxed text-destructive">
+                ההזמנה מאושרת סופית רק לאחר שתשלחו לנו בוואטסאפ עם אסמכתא על התשלום.
+              </p>
+            </div>
+            <motion.a href={wa} target="_blank" rel="noopener noreferrer"
+              animate={{ scale: [1, 1.03, 1] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 font-bold text-primary-foreground shadow-organic ring-2 ring-destructive/40"><MessageCircle className="h-5 w-5" /> שלח פרטי הזמנה ואסמכתא בוואטסאפ</motion.a>
             <Button variant="outline" className="mt-3 rounded-full" onClick={onClose}>סגירה</Button>
           </div>
         ) : (
@@ -593,7 +606,7 @@ function saveCustomer(fullName: string, phone: string) {
   try { localStorage.setItem("bikta_customer", JSON.stringify({ fullName, phone })); } catch {}
 }
 
-function OfflineConfirm({ token, range, method, total, name, waUrl, onHome }: { token: string; range: { start: string; end: string }; method: PayMethod; total: number; name: string; waUrl: string; onHome: () => void }) {
+function OfflineConfirm({ token, range, method, settlement, total, name, waUrl, onHome }: { token: string; range: { start: string; end: string }; method: PayMethod; settlement?: EndOfMonthMethod | undefined; total: number; name: string; waUrl: string; onHome: () => void }) {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
     confetti({ particleCount: 120, spread: 90, origin: { y: 0.35 }, colors: ["#2D4A32", "#8C502E", "#C9A06B"] });
@@ -616,20 +629,79 @@ function OfflineConfirm({ token, range, method, total, name, waUrl, onHome }: { 
         <dl className="space-y-2 text-sm">
           <Row k="מועד" v={`${formatDateTime(range.start)}–${formatTime(range.end)}`} />
           <Row k="תאריך עברי" v={hebrewDate(range.start)} />
-          <Row k="אמצעי תשלום" v={PAY_METHOD_LABEL[method]} />
+          <Row k="אמצעי תשלום" v={PAY_METHOD_LABEL[method === "סוף חודש" && settlement ? `סוף חודש - ${settlement}` : method]} />
           <Row k="סכום לתשלום" v={formatILS(total)} />
         </dl>
-        <p className="mt-4 rounded-xl bg-muted/60 p-3 text-xs leading-relaxed text-muted-foreground">שלחו לנו את פרטי ההזמנה בוואטסאפ (ואם שילמתם בביט או בהעברה – צרפו צילום אישור).</p>
+        <div className="mt-4"><PaymentDetails method={method} settlement={settlement} /></div>
+        <div className="mt-4 rounded-2xl border-2 border-destructive bg-destructive/10 p-4">
+          <p className="flex items-center justify-center gap-2 text-center font-display text-lg font-bold text-destructive">
+            <AlertTriangle className="h-5 w-5 shrink-0" /> חובה לשלוח לנו אסמכתא על התשלום!
+          </p>
+          <p className="mt-1.5 text-sm font-semibold leading-relaxed text-destructive">
+            ההזמנה מאושרת סופית רק לאחר שתשלחו לנו בוואטסאפ את פרטי ההזמנה יחד עם אסמכתא על התשלום (צילום אישור ביט או העברה).
+          </p>
+        </div>
         <Link to="/manage/$token" params={{ token }} className="mt-3 inline-block text-sm text-accent underline-offset-4 hover:underline">לניהול ההזמנה</Link>
       </div>
       <motion.a href={waUrl} target="_blank" rel="noopener noreferrer" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-organic">
-        <MessageCircle className="h-5 w-5" /> שלח פרטי הזמנה בוואטסאפ
+        animate={{ scale: [1, 1.03, 1] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-organic ring-2 ring-destructive/40">
+        <MessageCircle className="h-5 w-5" /> שלח פרטי הזמנה ואסמכתא בוואטסאפ
       </motion.a>
       <motion.button type="button" onClick={onHome} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
         className="fixed bottom-24 left-1/2 z-40 -translate-x-1/2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold text-primary shadow-organic">
         חזרה לעמוד הראשי
       </motion.button>
     </section>
+  );
+}
+
+function copyText(v: string, msg = "הועתק") {
+  navigator.clipboard.writeText(v); toast.success(msg);
+}
+
+function PaymentDetails({ method, settlement }: { method: PayMethod; settlement?: EndOfMonthMethod | undefined }) {
+  const eff: PayMethod = method === "סוף חודש" ? settlement ?? "סוף חודש" : method;
+  if (eff === "ביט") {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-4 text-right">
+        <div className="text-sm font-semibold">פרטי התשלום — ביט</div>
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <span dir="ltr" className="font-display text-xl font-bold text-primary">053-9000374</span>
+          <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={() => copyText("053-9000374", "מספר הביט הועתק")}>העתקה</Button>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">שלמו בביט למספר זה וצרפו צילום אישור העברה.</p>
+      </div>
+    );
+  }
+  if (eff === "העברה") {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-4 text-right">
+        <div className="text-sm font-semibold">פרטי התשלום — העברה בנקאית</div>
+        <dl className="mt-2 space-y-1 text-sm">
+          <Row k="בנק" v="12 — הפועלים" />
+          <Row k="סניף" v="290" />
+          <Row k="חשבון" v="62225" />
+          <Row k="על שם" v="מחלה בוקשפן" />
+        </dl>
+        <p className="mt-2 rounded-lg bg-muted/60 p-2 text-xs text-muted-foreground">סיבת ההעברה חובה: <b className="text-foreground">עבור שירותי משרד</b></p>
+        <Button type="button" variant="secondary" size="sm" className="mt-2 rounded-full"
+          onClick={() => copyText("בנק הפועלים (12) | סניף: 290 | חשבון: 62225 | על שם: מחלה בוקשפן | עבור שירותי משרד", "פרטי החשבון הועתקו")}>העתקת פרטי החשבון</Button>
+      </div>
+    );
+  }
+  if (eff === "מזומן") {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-4 text-right text-sm">
+        <div className="text-sm font-semibold">פרטי התשלום — מזומן</div>
+        <p className="mt-1.5 text-muted-foreground">התשלום יינתן במזומן במקום, בבקתה.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 text-right text-sm">
+      <div className="text-sm font-semibold">תשלום מרוכז בסוף חודש</div>
+      <p className="mt-1.5 text-muted-foreground">התשלום ירוכז לסוף החודש. ניצור איתכם קשר לסידור התשלום.</p>
+    </div>
   );
 }
