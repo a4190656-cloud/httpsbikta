@@ -139,7 +139,7 @@ function BookingPage() {
       </section>
       )}
 
-      <motion.section className="mx-auto max-w-4xl px-5 pb-24" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
+      <motion.section className={`mx-auto max-w-4xl px-5 pb-24 ${step === 0 ? "" : "pt-10"}`} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
         <Stepper step={step} />
         <div className="glass relative mt-6 overflow-hidden rounded-3xl p-6 sm:p-10">
           <AnimatePresence mode="wait" custom={dir}>
