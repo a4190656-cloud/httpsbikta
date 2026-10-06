@@ -494,7 +494,18 @@ function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; on
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring} className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-8 w-8" /></motion.div>
             <h3 className="mt-4 font-display text-2xl font-bold text-primary">ההזמנה נקלטה בהצלחה! 🥤</h3>
             <p className="mt-1 text-sm text-muted-foreground">השתייה מחכה לכם במקרר. לחיים!</p>
-            <a href={wa} target="_blank" rel="noopener noreferrer" className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 font-bold text-primary-foreground shadow-organic"><MessageCircle className="h-5 w-5" /> שלח פרטי הזמנה בוואטסאפ</a>
+            <div className="mt-4 text-right"><PaymentDetails method={method} settlement={endOfMonthMethod} /></div>
+            <div className="mt-4 rounded-2xl border-2 border-destructive bg-destructive/10 p-3 text-right">
+              <p className="flex items-center justify-center gap-2 text-center font-display text-base font-bold text-destructive">
+                <AlertTriangle className="h-4 w-4 shrink-0" /> חובה לשלוח לנו אסמכתא על התשלום!
+              </p>
+              <p className="mt-1 text-sm font-semibold leading-relaxed text-destructive">
+                ההזמנה מאושרת סופית רק לאחר שתשלחו לנו בוואטסאפ עם אסמכתא על התשלום.
+              </p>
+            </div>
+            <motion.a href={wa} target="_blank" rel="noopener noreferrer"
+              animate={{ scale: [1, 1.03, 1] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 font-bold text-primary-foreground shadow-organic ring-2 ring-destructive/40"><MessageCircle className="h-5 w-5" /> שלח פרטי הזמנה ואסמכתא בוואטסאפ</motion.a>
             <Button variant="outline" className="mt-3 rounded-full" onClick={onClose}>סגירה</Button>
           </div>
         ) : (
