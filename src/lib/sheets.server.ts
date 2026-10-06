@@ -74,3 +74,14 @@ export async function sheetMonthTotal(d = new Date()): Promise<{ total: number; 
   }
   return { total: filled.reduce((s, r) => s + num(r[7]), 0), rows: filled.length };
 }
+
+export type SheetRow = { row: number; cells: string[] };
+/** Reads every row of a month tab (A..K) so edits made in the sheet can flow back to the site. */
+export async function readMonthRows(tab: string): Promise<SheetRow[] | null> {
+  const h = headers();
+  if (!h) return null;
+  const res = await fetch(`${GATEWAY}/values/'${tab}'!A${FIRST_ROW}:K500`, { headers: h });
+  if (!res.ok) { console.error(`Sheets read failed [${res.status}]: ${await res.text()}`); return null; }
+  const values = ((await res.json()) as { values?: string[][] }).values ?? [];
+  return values.map((cells, i) => ({ row: FIRST_ROW + i, cells: cells.map((c) => String(c ?? "").trim()) }));
+}

@@ -20,5 +20,5 @@
 
 - Admin server functions use requireAdmin (src/lib/admin-auth.ts): signed-in admin bearer OR HMAC-signed HttpOnly PIN cookie from /api/admin-verify (ADMIN_ACCESS_KEY) — emergency access when the auth service is blocked by network filters.
 - Browser backend calls are rewritten to the same-origin proxy /api/public/sb/* (src/lib/backend-proxy.ts) — bypasses filters that block the backend domain.
-- Admin "יומן בקתה" ledger (LedgerPanel) is the source of truth; every booking create/update/delete mirrors to its Google Sheet row via syncSheet using bookings.sheet_tab/sheet_row — Sheet is a backup, not the master.
+- Sheet sync is two-way: site changes write to the booking's sheet row (syncSheet); opening the admin ledger/calendar imports the month tab back (importSheetMonth) — edited rows update bookings, new rows become kind "sheet" bookings, cleared rows cancel. Keeps sheet edits visible on the site.
 - Every customer payment method locks the slot immediately with status pending; administrators mark payment and receipt status in the ledger.
