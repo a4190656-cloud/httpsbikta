@@ -482,7 +482,7 @@ async function importSheetMonth(month: string) {
       const [pd, pm] = paidDateCell.split("/").map(Number);
       const paidAt = paid && pd && pm ? new Date(Date.UTC(y, pm - 1, pd, 9)).toISOString() : null;
       if (b) {
-        const patch: Record<string, unknown> = {};
+        const patch: any = {};
         if (fullName !== b.full_name) patch.full_name = fullName;
         if (phone && phone !== b.phone) patch.phone = phone;
         if (total !== Number(b.total)) { patch.total = total; patch.subtotal = total; patch.vat = 0; }
