@@ -606,7 +606,7 @@ function saveCustomer(fullName: string, phone: string) {
   try { localStorage.setItem("bikta_customer", JSON.stringify({ fullName, phone })); } catch {}
 }
 
-function OfflineConfirm({ token, range, method, settlement, total, name, waUrl, onHome }: { token: string; range: { start: string; end: string }; method: PayMethod; settlement?: EndOfMonthMethod; total: number; name: string; waUrl: string; onHome: () => void }) {
+function OfflineConfirm({ token, range, method, settlement, total, name, waUrl, onHome }: { token: string; range: { start: string; end: string }; method: PayMethod; settlement?: EndOfMonthMethod | undefined; total: number; name: string; waUrl: string; onHome: () => void }) {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
     confetti({ particleCount: 120, spread: 90, origin: { y: 0.35 }, colors: ["#2D4A32", "#8C502E", "#C9A06B"] });
