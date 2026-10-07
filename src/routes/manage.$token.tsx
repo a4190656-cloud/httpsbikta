@@ -10,7 +10,7 @@ import { hoursUntil, canCancel, formatDateTime, formatILS, hebrewDate, purposeLa
 import { cancelBooking, getBookingByToken } from "@/lib/bookings.functions";
 
 export const Route = createFileRoute("/manage/$token")({
-  head: () => ({ meta: [{ title: "ניהול הזמנה — בקתה B" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "ניהול הזמנה — בקתה B" }, { name: "description", content: "צפייה בפרטי הזמנת בקתה B וביטול עד 48 שעות לפני המועד באמצעות קישור אישי." }, { property: "og:title", content: "ניהול ההזמנה האישית — בקתה B" }, { property: "og:description", content: "צפייה בפרטי הזמנה וביטול בהתאם למדיניות בקתה B." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: Manage,
 });
 

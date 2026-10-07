@@ -113,7 +113,7 @@ export function paymentRecordMethod(method: PayMethod, settlement?: EndOfMonthMe
   return `סוף חודש - ${settlement}`;
 }
 export function paymentInstructions(method: PayMethod, settlement?: EndOfMonthMethod) {
-  if (method === "ביט") return "אופן תשלום: ביט למספר 053-9000374 (נא לצרף צילום אישור העברה)";
+  if (method === "ביט") return "אופן תשלום: ביט למספר 053-9000374";
   if (method === "העברה") return "אופן תשלום: העברה בנקאית\nבנק: 12 (הפועלים) | סניף: 290 | חשבון: 62225\nעל שם: מחלה בוקשפן\nסיבת העברה חובה: עבור שירותי משרד\n(נא לצרף צילום אסמכתא)";
   if (method === "מזומן") return "אופן תשלום: מזומן במקום בבקתה";
   return `אופן תשלום: תשלום מרוכז בסוף חודש (אמצעי תשלום נבחר: ${PAY_METHOD_LABEL[settlement ?? ""] ?? "לא נבחר"})`;

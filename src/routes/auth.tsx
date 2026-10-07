@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "כניסת מנהל — בקתה B" }, { name: "description", content: "כניסה לניהול הזמנות בקתה B" }] }),
+  head: () => ({ meta: [{ title: "כניסת מנהל — בקתה B" }, { name: "description", content: "כניסה לניהול הזמנות בקתה B" }, { property: "og:title", content: "כניסת מנהל — בקתה B" }, { property: "og:description", content: "כניסה מאובטחת לניהול הזמנות בקתה B." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: AuthPage,
 });
 

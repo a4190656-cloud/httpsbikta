@@ -11,6 +11,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
+import { ConfirmationContactActions, DrinksReminder, LostBookingLinkNotice, PersonalBookingLink } from "@/components/BookingConfirmationDetails";
 import { PhotoGallery, ReviewsSection } from "@/components/MediaSections";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -161,6 +162,7 @@ function BookingPage() {
           </AnimatePresence>
         </div>
       </motion.section>
+      {step === 0 && <section className="mx-auto max-w-4xl space-y-4 px-5 pb-8"><DrinksReminder /><LostBookingLinkNotice /></section>}
       <ReviewsSection />
       <PhotoGallery />
       <FloatingActions onDrinks={() => setDrinksOnly(true)} />
@@ -189,7 +191,7 @@ function FloatingActions({ onDrinks }: { onDrinks: () => void }) {
       </motion.div>
       <motion.div className="fixed bottom-5 left-3 z-30 sm:bottom-7 sm:left-6" {...breathe(1.3)}>
         <Button variant="secondary" className="h-12 rounded-full border border-accent/30 px-4 shadow-organic sm:h-14 sm:px-5" onClick={onDrinks}>
-          <CupSoda className="h-5 w-5 text-accent" /> <span>תשלום על שתייה</span>
+          <CupSoda className="h-5 w-5 text-accent" /> <span>עדכון על לקיחת שתייה</span>
         </Button>
       </motion.div>
     </>
@@ -396,7 +398,7 @@ function StepPay({ range, hours, cart, settings, form, onBack, onOffline }: {
       const r = await create({ data: { startsAt: range.start, endsAt: range.end, ...form, notes: form.notes || undefined, drinks: cart, paymentMethod: method, endOfMonthMethod } });
       const dateStr = new Date(range.start).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
       const drinkLine = drinksText(cart) ? `\nשתייה: ${drinksText(cart)}` : "";
-      const msg = `שלום, ביצעתי הזמנה בבקתה B.\nשם: ${form.fullName}\nטלפון: ${form.phone}\nתאריך: ${dateStr}\nשעות: ${formatTime(range.start)}–${formatTime(range.end)}\nסכום כולל: ${formatILS(r.total)}${drinkLine}\n\n${paymentInstructions(method, endOfMonthMethod)}`;
+      const msg = `שלום, ביצעתי הזמנה בבקתה B.\nשם: ${form.fullName}\nטלפון: ${form.phone}\nתאריך: ${dateStr}\nשעות: ${formatTime(range.start)}–${formatTime(range.end)}\nסכום כולל: ${formatILS(r.total)}${drinkLine}\n\n${paymentInstructions(method, endOfMonthMethod)}\n\nקישור אישי לניהול ההזמנה (יש לשמור): ${window.location.origin}/manage/${encodeURIComponent(r.token)}`;
       const url = `https://wa.me/972539000374?text=${encodeURIComponent(msg)}`;
       saveCustomer(form.fullName, form.phone);
       onOffline(r.token, method, endOfMonthMethod, url);
@@ -476,7 +478,7 @@ function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; on
     setLoading(true);
     try {
       const r = await create({ data: { fullName: name, phone, drinks: cart, paymentMethod: method, endOfMonthMethod } });
-      const msg = `שלום, רכשתי שתייה בבקתה B.\nשם: ${name}\nטלפון: ${phone}\nהזמנה: ${drinksText(cart)}\nסכום כולל: ${formatILS(r.total)}\n\n${paymentInstructions(method, endOfMonthMethod)}`;
+      const msg = `שלום, עדכנתי על לקיחת שתייה בבקתה B.\nשם: ${name}\nטלפון: ${phone}\nתאריך: ${formatDateTime(new Date().toISOString())}\nשתייה: ${drinksText(cart)}\nסכום כולל: ${formatILS(r.total)}\n\n${paymentInstructions(method, endOfMonthMethod)}`;
       setWa(`https://wa.me/972539000374?text=${encodeURIComponent(msg)}`);
       saveCustomer(name, phone);
       setOk(true);
@@ -493,25 +495,16 @@ function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; on
           <div className="py-8 text-center">
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring} className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-8 w-8" /></motion.div>
             <h3 className="mt-4 font-display text-2xl font-bold text-primary">ההזמנה נקלטה בהצלחה! 🥤</h3>
-            <p className="mt-1 text-sm text-muted-foreground">השתייה מחכה לכם במקרר. לחיים!</p>
+            <p className="mt-1 text-sm text-muted-foreground">עדכון לקיחת השתייה נשמר בהצלחה. תודה!</p>
             <div className="mt-4 text-right"><PaymentDetails method={method} settlement={endOfMonthMethod} /></div>
-            <div className="mt-4 rounded-2xl border-2 border-destructive bg-destructive/10 p-3 text-right">
-              <p className="flex items-center justify-center gap-2 text-center font-display text-base font-bold text-destructive">
-                <AlertTriangle className="h-4 w-4 shrink-0" /> חובה לשלוח לנו אסמכתא על התשלום!
-              </p>
-              <p className="mt-1 text-sm font-semibold leading-relaxed text-destructive">
-                ההזמנה מאושרת סופית רק לאחר שתשלחו לנו בוואטסאפ עם אסמכתא על התשלום.
-              </p>
-            </div>
-            <motion.a href={wa} target="_blank" rel="noopener noreferrer"
-              animate={{ scale: [1, 1.03, 1] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 font-bold text-primary-foreground shadow-organic ring-2 ring-destructive/40"><MessageCircle className="h-5 w-5" /> שלח פרטי הזמנה ואסמכתא בוואטסאפ</motion.a>
+            <ConfirmationContactActions waUrl={wa} method={method} settlement={endOfMonthMethod} drinksOnly />
+            <div className="mt-5"><DrinksReminder /></div>
             <Button variant="outline" className="mt-3 rounded-full" onClick={onClose}>סגירה</Button>
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-2"><CupSoda className="h-6 w-6 text-accent" /><h3 className="font-display text-xl font-bold">שתייה קרה בלי הזמנה</h3></div>
-            <p className="mt-1 text-sm text-muted-foreground">אתם כבר בבקתה או בגינה? בחרו, שלמו, וקחו מהמקרר.</p>
+            <div className="flex items-center gap-2"><CupSoda className="h-6 w-6 text-accent" /><h3 className="font-display text-xl font-bold">עדכון על לקיחת שתייה</h3></div>
+            <p className="mt-1 text-sm text-muted-foreground">לקחתם שתייה מהמקרר? עדכנו את הכמויות ובחרו כיצד להסדיר את התשלום.</p>
             <div className="mt-4"><DrinkCounters cart={cart} setCart={setCart} prices={settings.drinkPrices} /></div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <Field label="שם"><Input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} /></Field>
@@ -536,12 +529,12 @@ function DrinksOnly({ settings, onClose, initialCart }: { settings: Settings; on
                   </div>
                 </div>
               )}
-              <p className="mt-2 text-xs text-muted-foreground">ההזמנה תישלח לאישור בוואטסאפ עם הוראות התשלום.</p>
+              <p className="mt-2 text-xs text-muted-foreground">העדכון יישמר במערכת. לאחר מכן תוכלו לשלוח את הפרטים בוואטסאפ או במייל.</p>
             </div>
             <Consent checked={agreed} onChange={setAgreed} />
             <Button size="lg" className="mt-3 h-12 w-full rounded-full text-base"
               disabled={!total || loading || !agreed || (method === "סוף חודש" && !endOfMonthMethod)} onClick={submit}>
-              {loading && <Loader2 className="h-4 w-4 animate-spin" />} אישור הזמנה {formatILS(total)}
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />} שמירת עדכון שתייה {formatILS(total)}
             </Button>
           </>
         )}
@@ -624,7 +617,7 @@ function OfflineConfirm({ token, range, method, settlement, total, name, waUrl, 
         </motion.div>
       </div>
       <h1 className="mt-6 font-display text-3xl font-bold text-primary">ההזמנה נקלטה בהצלחה!</h1>
-      <p className="mt-2 text-muted-foreground">תודה {name.split(" ")[0]}, המועד שמור עבורכם. נתראה בבקתה 🌿</p>
+      <p className="mt-2 font-semibold text-primary">תודה {name.split(" ")[0]}, המקום שוריין בהצלחה עבורכם. נתראה בבקתה 🌿</p>
       <div className="glass mt-6 rounded-3xl p-5 text-right">
         <dl className="space-y-2 text-sm">
           <Row k="מועד" v={`${formatDateTime(range.start)}–${formatTime(range.end)}`} />
@@ -633,21 +626,10 @@ function OfflineConfirm({ token, range, method, settlement, total, name, waUrl, 
           <Row k="סכום לתשלום" v={formatILS(total)} />
         </dl>
         <div className="mt-4"><PaymentDetails method={method} settlement={settlement} /></div>
-        <div className="mt-4 rounded-2xl border-2 border-destructive bg-destructive/10 p-4">
-          <p className="flex items-center justify-center gap-2 text-center font-display text-lg font-bold text-destructive">
-            <AlertTriangle className="h-5 w-5 shrink-0" /> חובה לשלוח לנו אסמכתא על התשלום!
-          </p>
-          <p className="mt-1.5 text-sm font-semibold leading-relaxed text-destructive">
-            ההזמנה מאושרת סופית רק לאחר שתשלחו לנו בוואטסאפ את פרטי ההזמנה יחד עם אסמכתא על התשלום (צילום אישור ביט או העברה).
-          </p>
-        </div>
-        <Link to="/manage/$token" params={{ token }} className="mt-3 inline-block text-sm text-accent underline-offset-4 hover:underline">לניהול ההזמנה</Link>
       </div>
-      <motion.a href={waUrl} target="_blank" rel="noopener noreferrer" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-        animate={{ scale: [1, 1.03, 1] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-organic ring-2 ring-destructive/40">
-        <MessageCircle className="h-5 w-5" /> שלח פרטי הזמנה ואסמכתא בוואטסאפ
-      </motion.a>
+      <PersonalBookingLink token={token} />
+      <ConfirmationContactActions waUrl={waUrl} method={method} settlement={settlement} />
+      <div className="mt-5"><DrinksReminder /></div>
       <motion.button type="button" onClick={onHome} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
         className="fixed bottom-24 left-1/2 z-40 -translate-x-1/2 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold text-primary shadow-organic">
         חזרה לעמוד הראשי
@@ -670,7 +652,7 @@ function PaymentDetails({ method, settlement }: { method: PayMethod; settlement?
           <span dir="ltr" className="font-display text-xl font-bold text-primary">053-9000374</span>
           <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={() => copyText("053-9000374", "מספר הביט הועתק")}>העתקה</Button>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">שלמו בביט למספר זה וצרפו צילום אישור העברה.</p>
+        <p className="mt-1 text-xs text-muted-foreground">שלמו בביט למספר זה.</p>
       </div>
     );
   }

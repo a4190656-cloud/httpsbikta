@@ -15,7 +15,7 @@ import { LedgerPanel, ManualBookingDialog, RevenuePanel, ReviewsAdminPanel, Sett
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
-  head: () => ({ meta: [{ title: "לוח ניהול — בקתה B" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "לוח ניהול — בקתה B" }, { name: "description", content: "ניהול תפוסה, הזמנות שעות ושתייה ותשלומים בבקתה B." }, { property: "og:title", content: "לוח ניהול — בקתה B" }, { property: "og:description", content: "ניהול הזמנות ותשלומים בבקתה B." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: Admin,
 });
 
