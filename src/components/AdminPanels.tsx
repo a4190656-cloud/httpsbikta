@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DRINKS, PURPOSES, drinksTotal, drinksText, formatILS, formatTime, hoursLabel, PAYMENT_RECORD_METHODS, PAY_METHOD_LABEL, STATUSES, STATUS_LABEL, type DrinkCart, type DrinkPrices } from "@/lib/booking-rules";
 import { adminDeleteBooking, adminLedger, adminUpdateBooking, adminAddTransaction, adminAddReview, adminCreateManual, adminDeleteReview, adminListReviews, adminRevenue, adminSaveSettings, adminUpdateReview, getSettings } from "@/lib/bookings.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { DrinksLedgerActions, TillNoteDialog } from "@/components/DrinksAdminPanel";
+import { drinksLedgerTotals } from "@/lib/drinks-ledger";
 
 const METHODS = PAYMENT_RECORD_METHODS;
 
@@ -294,19 +296,20 @@ export function LedgerPanel() {
   const del = useServerFn(adminDeleteBooking);
   const [month, setMonth] = useState(() => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit" }).format(new Date()));
   const [edit, setEdit] = useState<any | null>(null);
-  const { data, isLoading } = useQuery({ queryKey: ["ledger", month], queryFn: () => ledger({ data: { month } }) });
+  const { data, isLoading } = useQuery({ queryKey: ["ledger", month], queryFn: () => ledger({ data: { month } }), refetchInterval: 30_000 });
   const refresh = () => { qc.invalidateQueries({ queryKey: ["ledger"] }); qc.invalidateQueries({ queryKey: ["admin"] }); qc.invalidateQueries({ queryKey: ["revenue"] }); };
   const patch = async (id: string, p: Record<string, unknown>) => {
     try { await update({ data: { id, ...p } as any }); refresh(); } catch (e: any) { toast.error(e?.message ?? "עדכון נכשל"); }
   };
   const monthLabel = new Date(`${month}-01T12:00`).toLocaleDateString("he-IL", { month: "long", year: "numeric" });
   const rows = data?.rows ?? [];
+  const totals = drinksLedgerTotals(rows);
 
   return (
     <section dir="rtl" className="glass mt-6 rounded-2xl p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 font-semibold"><FileSpreadsheet className="h-4 w-4 text-accent" /> יומן בקתה</h2>
-        <Input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} className="w-44" aria-label="בחירת חודש" />
+        <div className="flex flex-wrap items-center gap-2"><TillNoteDialog onSaved={async () => { refresh(); }} /><Input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} className="w-44" aria-label="בחירת חודש" /></div>
       </div>
       <div className="mt-3 rounded-xl bg-primary px-4 py-3 text-primary-foreground">
         <span className="text-sm opacity-90">סך הכנסות לחודש זה ({monthLabel}): </span>
@@ -348,6 +351,7 @@ export function LedgerPanel() {
                     try { await del({ data: { id: r.id } }); toast.success("ההזמנה נמחקה והמועד שוחרר"); refresh(); } catch (e: any) { toast.error(e?.message ?? "מחיקה נכשלה"); }
                   }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
+                <DrinksLedgerActions row={r} />
               </article>
             );
           })}
@@ -387,6 +391,7 @@ export function LedgerPanel() {
                         if (!confirm("האם למחוק הזמנה זו?")) return;
                         try { await del({ data: { id: r.id } }); toast.success("ההזמנה נמחקה והמועד שוחרר"); refresh(); } catch (e: any) { toast.error(e?.message ?? "מחיקה נכשלה"); }
                       }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      <DrinksLedgerActions row={r} />
                     </td>
                   </tr>
                 );
@@ -396,6 +401,9 @@ export function LedgerPanel() {
           </table>
         </div>
       )}
+      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        {[["הכנסות משתייה ששולמה", totals.drinksPaid], ["חובות שתייה פתוחים", totals.drinksDebt], ["סך הכנסות — בקתה ושתייה", totals.income], ["הוצאות החודש", totals.expenses], ["יתרה — הכנסות פחות הוצאות", totals.balance]].map(([label, value]) => <div key={label} className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 font-semibold text-primary">{formatILS(Number(value))}</p></div>)}
+      </div>
       <p className="mt-2 text-xs text-muted-foreground">כל שינוי נשמר מיד ומתעדכן ברקע גם בגיליון.</p>
       {edit && <EditBookingDialog row={edit} onClose={() => setEdit(null)} onSave={async (p) => { await patch(edit.id, p); setEdit(null); }} />}
     </section>
