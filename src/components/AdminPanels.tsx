@@ -303,7 +303,7 @@ export function LedgerPanel() {
   const rows = data?.rows ?? [];
 
   return (
-    <section className="glass mt-6 rounded-2xl p-4 sm:p-5">
+    <section dir="rtl" className="glass mt-6 rounded-2xl p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 font-semibold"><FileSpreadsheet className="h-4 w-4 text-accent" /> יומן בקתה</h2>
         <Input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} className="w-44" aria-label="בחירת חודש" />
@@ -356,7 +356,7 @@ export function LedgerPanel() {
       )}
       {!isLoading && (
         <div className="mt-4 hidden overflow-x-auto rounded-xl border border-border bg-card md:block">
-          <table className="w-full min-w-[980px] text-sm">
+          <table dir="rtl" className="w-full min-w-[980px] text-sm">
             <thead className="bg-muted/60 text-xs text-muted-foreground">
               <tr>{["#", "תאריך", "שם ומשפחה", "שעות", "שתייה", "אמצעי תשלום", "תאריך תשלום", "סכום", "שולם", "קבלה", "סטטוס", "פעולות"].map((h) => <th key={h} className="px-2 py-2 text-right font-medium">{h}</th>)}</tr>
             </thead>
