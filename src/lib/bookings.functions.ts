@@ -313,6 +313,7 @@ export const adminCreateManual = createServerFn({ method: "POST" })
     startsAt: z.string().datetime({ offset: true }).nullable(),
     endsAt: z.string().datetime({ offset: true }).nullable(),
     purpose: z.string().max(20),
+    occurredAt: z.string().datetime({ offset: true }).optional(),
     drinks: cartSchema,
     amount: z.number().min(0).max(100000),
     method: z.enum([...PAYMENT_RECORD_METHODS, "אחר"]),
@@ -326,15 +327,15 @@ export const adminCreateManual = createServerFn({ method: "POST" })
     const s = await loadSettings();
     const isBooking = !!(data.startsAt && data.endsAt);
     const now = new Date().toISOString();
-    const hours = isBooking ? (new Date(data.endsAt!).getTime() - new Date(data.startsAt!).getTime()) / 3600000 : 0;
+    const hours = data.startsAt && data.endsAt ? (new Date(data.endsAt).getTime() - new Date(data.startsAt).getTime()) / 3600000 : 0;
     if (isBooking && hours <= 0) throw new Error("שעת הסיום חייבת להיות אחרי ההתחלה");
     const v = splitVat(data.amount);
     const row = {
       kind: isBooking ? "booking" : "drinks", purpose: isBooking ? data.purpose : "drinks",
-      starts_at: data.startsAt ?? now, ends_at: data.endsAt ?? now, hours: Math.ceil(hours), duration_hours: hours,
+      starts_at: data.startsAt ?? data.occurredAt ?? now, ends_at: data.endsAt ?? data.occurredAt ?? now, hours: Math.ceil(hours), duration_hours: hours,
       full_name: data.fullName, phone: data.phone, email: "", attendees: 1, notes: data.notes || null,
       subtotal: v.subtotal, vat: v.vat, total: data.amount, manage_token: newToken(),
-      drinks: data.drinks, drinks_total: drinksTotal(data.drinks, s.drinkPrices),
+      drinks: data.drinks, drinks_total: isBooking ? drinksTotal(data.drinks, s.drinkPrices) : data.amount,
       payment_method: data.method, source: "manual", status: data.paid ? (data.receipt ? "invoiced" : "paid") : "pending",
       paid_at: data.paid ? now : null, receipt_issued: !!data.receipt,
     };
@@ -542,7 +543,7 @@ export const adminLedger = createServerFn({ method: "POST" })
     const to = new Date(Date.UTC(y, m, 1) + 3 * 3600_000).toISOString();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error } = await supabaseAdmin.from("bookings")
-      .select("id, kind, starts_at, ends_at, duration_hours, full_name, phone, drinks, payment_method, paid_at, total, status, receipt_issued, notes, source, created_at")
+      .select("id, kind, starts_at, ends_at, duration_hours, full_name, phone, drinks, drinks_total, payment_method, paid_at, total, status, receipt_issued, notes, source, created_at")
       .gte("starts_at", from).lt("starts_at", to).order("starts_at");
     if (error) throw new Error(error.message);
     const list = (rows ?? []).filter((r) => jlmMonth(r.starts_at) === data.month);
@@ -581,7 +582,7 @@ export const adminUpdateBooking = createServerFn({ method: "POST" })
     }
     if (data.paidAt !== undefined) patch.paid_at = data.paidAt ? `${data.paidAt}T12:00:00+03:00` : null;
     if (data.method) patch.payment_method = data.method;
-    if (data.total !== undefined) { const v = splitVat(data.total); patch.total = data.total; patch.subtotal = v.subtotal; patch.vat = v.vat; }
+    if (data.total !== undefined) { const v = splitVat(data.total); patch.total = data.total; patch.subtotal = v.subtotal; patch.vat = v.vat; if (b.kind === "drinks") patch.drinks_total = data.total; }
     if (data.fullName) patch.full_name = data.fullName;
     if (data.phone !== undefined) patch.phone = data.phone;
     if (data.notes !== undefined) patch.notes = data.notes || null;
