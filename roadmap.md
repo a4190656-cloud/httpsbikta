@@ -1,4 +1,6 @@
 # Requested updates
+- [ ] Restore RTL ledger column order and verify it.
+- [ ] Keep cabin bookings, drinks and till notes in one admin table with existing cash/debt controls.
 - [x] Rename drinks action and add homepage/completion reminders and lost-link guidance.
 - [x] Show and copy personal management link in booking completion.
 - [x] Replace red warning with reassuring reservation and conditional bank-transfer proof request.
