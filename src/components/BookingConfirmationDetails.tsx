@@ -48,7 +48,7 @@ export function PersonalBookingLink({ token }: { token: string }) {
   );
 }
 
-export function ConfirmationContactActions({ waUrl, method, settlement, drinksOnly = false }: { waUrl: string; method: PayMethod; settlement?: EndOfMonthMethod; drinksOnly?: boolean }) {
+export function ConfirmationContactActions({ waUrl, method, settlement, drinksOnly = false }: { waUrl: string; method: PayMethod; settlement?: EndOfMonthMethod | undefined; drinksOnly?: boolean }) {
   const needsProof = method === "העברה" || (method === "סוף חודש" && settlement === "העברה");
   let message = "";
   try { message = new URL(waUrl).searchParams.get("text") ?? ""; } catch {}
