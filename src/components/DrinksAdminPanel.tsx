@@ -1,72 +1,44 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Banknote, Check, CupSoda, Loader2, MessageCircle, Minus, Plus, RefreshCw } from "lucide-react";
+import { Banknote, Loader2, MessageCircle, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DEFAULT_SETTINGS, DRINKS, FREE_STATUSES, INCOME_STATUSES, PAY_METHOD_LABEL, drinksText, drinksTotal, formatDateTime, formatILS, type DrinkCart } from "@/lib/booking-rules";
-import { adminCreateManual, adminLedger, adminUpdateBooking, getSettings } from "@/lib/bookings.functions";
-import { drinkAmount, drinksLedgerTotals } from "@/lib/drinks-ledger";
+import { DEFAULT_SETTINGS, DRINKS, FREE_STATUSES, INCOME_STATUSES, PAY_METHOD_LABEL, drinksTotal, formatILS, type DrinkCart } from "@/lib/booking-rules";
+import { adminCreateManual, adminUpdateBooking, getSettings } from "@/lib/bookings.functions";
+import { drinkAmount } from "@/lib/drinks-ledger";
 
-const monthNow = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit" }).format(new Date());
+type DrinksRow = { id: string; kind: string; full_name: string; phone: string; total: number | string; drinks_total: number | string; status: string; notes?: string | null };
 
-export function DrinksAdminPanel() {
+export function DrinksLedgerActions({ row }: { row: DrinksRow }) {
   const qc = useQueryClient();
-  const ledger = useServerFn(adminLedger), update = useServerFn(adminUpdateBooking);
-  const [month, setMonth] = useState(monthNow);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [savingId, setSavingId] = useState<string | null>(null);
-  const query = useQuery({ queryKey: ["ledger", month], queryFn: () => ledger({ data: { month } }), refetchInterval: 30_000 });
-  const rows = query.data?.rows ?? [];
-  const totals = drinksLedgerTotals(rows);
-  const refresh = async () => { await Promise.all([qc.invalidateQueries({ queryKey: ["ledger"] }), qc.invalidateQueries({ queryKey: ["admin"] }), qc.invalidateQueries({ queryKey: ["revenue"] })]); };
-  const drinks = rows.filter((r) => !FREE_STATUSES.includes(r.status) && drinkAmount(r) > 0);
-  const filtered = drinks.filter((r) => {
-    const paid = INCOME_STATUSES.includes(r.status);
-    return (filter === "all" || (filter === "paid" ? paid : r.status === "pending")) && `${r.full_name} ${r.phone}`.includes(search.trim());
-  });
-  async function markPaid(row: (typeof rows)[number], cash: boolean) {
+  const update = useServerFn(adminUpdateBooking);
+  const [saving, setSaving] = useState(false);
+  if (FREE_STATUSES.includes(row.status) || drinkAmount(row) <= 0) return null;
+  if (INCOME_STATUSES.includes(row.status)) return row.notes?.includes("הותאם מול הקופה") ? <span className="text-xs text-primary">הותאם מול הקופה</span> : null;
+  async function reconcile() {
     if (row.kind !== "drinks" && !confirm("השתייה כלולה בהזמנת בקתה. סימון זה יסמן את כל ההזמנה כשולמה, כולל שעות הבקתה. להמשיך?")) return;
-    setSavingId(row.id);
+    setSaving(true);
     try {
-      await update({ data: { id: row.id, paid: true, ...(cash ? { method: "מזומן" as const, notes: [row.notes, "שולם במזומן / הותאם מול הקופה"].filter(Boolean).join("\n").slice(0, 1000) } : {}) } });
-      toast.success(cash ? "שולם במזומן והותאם מול הקופה" : "התשלום עודכן"); await refresh();
+      await update({ data: { id: row.id, paid: true, method: "מזומן", notes: [row.notes, "שולם במזומן / הותאם מול הקופה"].filter(Boolean).join("\n").slice(0, 1000) } });
+      await Promise.all([qc.invalidateQueries({ queryKey: ["ledger"] }), qc.invalidateQueries({ queryKey: ["admin"] }), qc.invalidateQueries({ queryKey: ["revenue"] })]);
+      toast.success("שולם במזומן והותאם מול הקופה");
     } catch (e) { toast.error(e instanceof Error ? e.message : "עדכון התשלום נכשל"); }
-    finally { setSavingId(null); }
+    finally { setSaving(false); }
   }
-  function actions(row: (typeof rows)[number]) {
-    if (INCOME_STATUSES.includes(row.status)) return <span className="inline-flex items-center gap-1 text-xs font-medium text-primary"><Check className="h-4 w-4" />{row.notes?.includes("הותאם מול הקופה") ? "הותאם מול הקופה" : "שולם"}</span>;
-    const digits = row.phone.replace(/\D/g, "");
-    const phone = digits.startsWith("0") ? `972${digits.slice(1)}` : digits;
-    const valid = /^972\d{8,9}$/.test(phone);
-    const message = `היי ${row.full_name}, ראינו שדיווחת על לקיחת שתייה בסך ${formatILS(drinkAmount(row))}, נשמח להסדרת התשלום. תודה, בקתה B`;
-    return <div className="flex flex-wrap items-center gap-2">
-      <Button size="sm" disabled={savingId === row.id} onClick={() => markPaid(row, true)}><Banknote />שולם במזומן / הותאם</Button>
-      <Button size="sm" variant="outline" disabled={savingId === row.id} onClick={() => markPaid(row, false)}><Check />שולם</Button>
-      {valid ? <Button asChild size="icon" variant="outline"><a href={`https://wa.me/${phone}?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer" aria-label={`תזכורת חוב בוואטסאפ ל${row.full_name}`} title="תזכורת חוב בוואטסאפ"><MessageCircle /></a></Button> : <span className="text-xs text-muted-foreground">אין מספר לתזכורת</span>}
-    </div>;
-  }
-  return (
-    <section className="mt-6 min-w-0" aria-label="ניהול שתייה, קופה ומעקב חובות">
-      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="flex items-center gap-2 font-display text-2xl font-bold text-primary"><CupSoda />ניהול שתייה, קופה ומעקב חובות</h2><TillNoteDialog onSaved={refresh} /></div>
-      <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        {[["הכנסות משתייה ששולמה", totals.drinksPaid], ["חובות שתייה פתוחים", totals.drinksDebt], ["סך הכנסות — בקתה ושתייה", totals.income], ["הוצאות החודש", totals.expenses], ["יתרה — הכנסות פחות הוצאות", totals.balance]].map(([label, value]) => <div key={label} className="rounded-lg border border-border bg-card p-4"><p className="text-xs leading-relaxed text-muted-foreground">{label}</p><p className="mt-2 font-display text-xl font-bold text-primary">{formatILS(Number(value))}</p></div>)}
-      </div>
-      <div className="mt-5 flex flex-wrap gap-3"><Input aria-label="חודש קופת שתייה" type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} className="w-44" /><Input aria-label="חיפוש לקוח שתייה" placeholder="חיפוש לפי שם או טלפון" value={search} onChange={(e) => setSearch(e.target.value)} className="min-w-0 flex-1" /><select aria-label="סינון תשלום שתייה" value={filter} onChange={(e) => setFilter(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="all">כל התשלומים</option><option value="debt">ממתין לתשלום / חוב</option><option value="paid">שולם</option></select><Button variant="outline" size="icon" aria-label="רענון קופת שתייה" disabled={query.isFetching} onClick={() => query.refetch()}><RefreshCw className={query.isFetching ? "animate-spin" : ""} /></Button></div>
-      {query.isError ? <p role="alert" className="mt-5 text-destructive">לא הצלחנו לטעון את הקופה. נסו לרענן.</p> : query.isLoading ? <Loader2 className="mt-6 animate-spin" /> : <>
-        <div className="mt-5 hidden overflow-x-auto rounded-lg border border-border md:block"><table className="w-full text-right text-sm"><thead className="bg-muted"><tr>{["תאריך ושעה", "לקוח", "משקאות וכמויות", "סכום שתייה", "אמצעי תשלום", "סטטוס", "פעולות"].map((h) => <th key={h} className="p-3 font-medium">{h}</th>)}</tr></thead><tbody>{filtered.map((r) => <tr key={r.id} className="border-t border-border align-top"><td className="p-3">{formatDateTime(r.starts_at)}</td><td className="p-3"><b>{r.full_name}</b><div dir="ltr" className="text-right text-xs text-muted-foreground">{r.phone || r.id.slice(0, 8)}</div></td><td className="p-3">{drinksText(r.drinks as DrinkCart) || r.notes || "שתייה"}{r.kind !== "drinks" && <div className="mt-1 text-xs text-muted-foreground">כלול בהזמנת בקתה</div>}</td><td className="p-3 font-semibold">{formatILS(drinkAmount(r))}</td><td className="p-3">{PAY_METHOD_LABEL[r.payment_method] ?? r.payment_method}</td><td className="p-3">{INCOME_STATUSES.includes(r.status) ? "שולם" : "ממתין לתשלום / חוב"}</td><td className="p-3">{actions(r)}</td></tr>)}</tbody></table></div>
-        <div className="mt-5 space-y-3 md:hidden">{filtered.map((r) => <article key={r.id} className="rounded-lg border border-border bg-card p-4"><div className="flex items-start justify-between gap-2"><h3 className="min-w-0 break-words font-semibold">{r.full_name}</h3><b className="shrink-0 text-primary">{formatILS(drinkAmount(r))}</b></div><p className="mt-1 text-xs text-muted-foreground">{formatDateTime(r.starts_at)}</p><p className="mt-3 text-sm">{drinksText(r.drinks as DrinkCart) || r.notes || "שתייה"}</p><p className="mt-2 text-xs">{PAY_METHOD_LABEL[r.payment_method] ?? r.payment_method} · {INCOME_STATUSES.includes(r.status) ? "שולם" : "ממתין לתשלום / חוב"}</p>{r.kind !== "drinks" && <p className="mt-1 text-xs text-muted-foreground">כלול בהזמנת בקתה</p>}<div className="mt-3 border-t border-border pt-3">{actions(r)}</div></article>)}</div>
-        {!filtered.length && <p className="py-10 text-center text-muted-foreground">אין דיווחי שתייה התואמים לחיפוש בחודש זה.</p>}
-      </>}
-    </section>
-  );
+  const digits = row.phone.replace(/\D/g, "");
+  const phone = digits.startsWith("0") ? `972${digits.slice(1)}` : digits;
+  const message = `היי ${row.full_name}, ראינו שדיווחת על לקיחת שתייה בסך ${formatILS(drinkAmount(row))}, נשמח להסדרת התשלום. תודה, בקתה B`;
+  return <div className="mt-2 flex flex-wrap items-center gap-1">
+    <Button size="icon" variant="outline" disabled={saving} onClick={reconcile} aria-label="שולם במזומן / הותאם" title="שולם במזומן / הותאם מול הקופה"><Banknote className="h-4 w-4" /></Button>
+    {/^972\d{8,9}$/.test(phone) && <Button asChild size="icon" variant="outline"><a href={`https://wa.me/${phone}?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer" aria-label={`תזכורת חוב בוואטסאפ ל${row.full_name}`} title="תזכורת חוב בוואטסאפ"><MessageCircle className="h-4 w-4" /></a></Button>}
+  </div>;
 }
 
-function TillNoteDialog({ onSaved }: { onSaved: () => Promise<void> }) {
+export function TillNoteDialog({ onSaved }: { onSaved: () => Promise<void> }) {
   const create = useServerFn(adminCreateManual), fetchSettings = useServerFn(getSettings);
   const { data: settings = DEFAULT_SETTINGS } = useQuery({ queryKey: ["settings"], queryFn: () => fetchSettings() });
   const [open, setOpen] = useState(false), [saving, setSaving] = useState(false);
