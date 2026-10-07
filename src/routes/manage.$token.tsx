@@ -46,7 +46,7 @@ function Manage() {
                   <Button variant="destructive" className="w-full" disabled={busy} onClick={async () => {
                     if (!confirm("לבטל את ההזמנה?")) return;
                     setBusy(true);
-                    try { await cancel({ data: { token } }); toast.success("ההזמנה בוטלה. ההחזר יטופל בהקדם."); qc.invalidateQueries({ queryKey: ["manage", token] }); }
+                    try { await cancel({ data: { token } }); toast.success("המועד בוטל"); qc.invalidateQueries({ queryKey: ["manage", token] }); }
                     catch (e: any) { toast.error(e?.message ?? "הביטול נכשל"); } finally { setBusy(false); }
                   }}>{busy && <Loader2 className="h-4 w-4 animate-spin" />}ביטול ההזמנה</Button>
                 </div>
