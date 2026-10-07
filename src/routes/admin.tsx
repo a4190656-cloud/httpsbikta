@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { formatILS, formatTime, purposeLabel } from "@/lib/booking-rules";
 import { adminAddBlock, adminList, adminRemoveBlock, getAdminStatus } from "@/lib/bookings.functions";
 import { LedgerPanel, ManualBookingDialog, RevenuePanel, ReviewsAdminPanel, SettingsPanel } from "@/components/AdminPanels";
+import { DrinksAdminPanel } from "@/components/DrinksAdminPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -66,6 +68,10 @@ function Admin() {
         <div className="flex gap-2"><ManualBookingDialog />
         <Button variant="ghost" onClick={async () => { await fetch("/api/admin-verify", { method: "DELETE" }).catch(() => {}); await supabase.auth.signOut().catch(() => {}); qc.clear(); location.assign("/"); }}><LogOut className="h-4 w-4" /> יציאה</Button></div>
       </div>
+      <Tabs defaultValue="bookings" className="mt-5 min-w-0">
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1"><TabsTrigger value="bookings">יומן בקתה</TabsTrigger><TabsTrigger value="drinks">שתייה, קופה וחובות</TabsTrigger></TabsList>
+        <TabsContent value="drinks"><DrinksAdminPanel /></TabsContent>
+        <TabsContent value="bookings">
       <LedgerPanel />
       <RevenuePanel />
 
@@ -131,6 +137,8 @@ function Admin() {
           }}><Lock className="h-4 w-4" /> חסימה</Button>
         </div>
       </div>
+        </TabsContent>
+      </Tabs>
       <ReviewsAdminPanel />
       <SettingsPanel />
     </Wrap>
