@@ -111,7 +111,7 @@ function BookingPage() {
   }
 
   return (
-    <Shell>
+    <Shell showInstall={step === 0}>
       {step === 0 && (
       <section className="mx-auto max-w-6xl px-5 pb-6 pt-10 text-center">
         <motion.div initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.1 } } }}>
