@@ -10,3 +10,5 @@
 - [x] Verify booking and drinks completion, management links, and site loading using mocked writes; verify real admin ledger reads.
 - [x] Add cash reconciliation and manual till notes to the unified admin ledger.
 - [x] Show paid drinks, drinks debt and combined revenue totals; add WhatsApp debt reminder.
+- [x] Move all page text further down so it clears the install-button panel.
+- [x] Keep the header-to-text gap at a natural size (clears the panel, no big empty band).
