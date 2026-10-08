@@ -1,6 +1,6 @@
 # Requested updates
-- [ ] Update WhatsApp share title and verify logo metadata.
-- [ ] Add and verify home-screen installation with branded icons and browser guidance.
+- [x] Update WhatsApp share title and verify logo metadata.
+- [x] Add and verify home-screen installation with branded icons and browser guidance.
 - [x] Restore RTL ledger column order and verify it.
 - [x] Keep cabin bookings, drinks and till notes in one admin table with existing cash/debt controls.
 - [x] Rename drinks action and add homepage/completion reminders and lost-link guidance.
