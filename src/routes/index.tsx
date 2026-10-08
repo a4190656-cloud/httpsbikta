@@ -172,8 +172,8 @@ function BookingPage() {
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen bg-background bg-hero"><SiteHeader />{children}</div>;
+function Shell({ children, showInstall = false }: { children: React.ReactNode; showInstall?: boolean }) {
+  return <div className="min-h-screen bg-background bg-hero"><SiteHeader showInstall={showInstall} />{children}</div>;
 }
 
 function FloatingActions({ onDrinks }: { onDrinks: () => void }) {

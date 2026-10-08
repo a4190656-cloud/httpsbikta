@@ -18,11 +18,13 @@ export function SiteHeader({ showInstall = false }: { showInstall?: boolean }) {
           <Link to="/admin" className="hover:text-foreground">ניהול</Link>
         </nav>
       </div>
-      <div className="absolute left-3 top-full sm:left-5">
-        <div className="rounded-b-[24px] glass !border-x-0 !border-t-0 !shadow-none px-3 pb-2 pt-0.5 shadow-[0_14px_30px_-20px] shadow-primary/40">
-          <AddToHomeScreen />
+      {showInstall && (
+        <div className="absolute left-3 top-full sm:left-5">
+          <div className="rounded-b-[24px] glass !border-x-0 !border-t-0 !shadow-none px-3 pb-2 pt-0.5 shadow-[0_14px_30px_-20px] shadow-primary/40">
+            <AddToHomeScreen />
+          </div>
         </div>
-      </div>
+      )}
     </header>
   );
 }
