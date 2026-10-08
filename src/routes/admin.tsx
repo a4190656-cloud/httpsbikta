@@ -138,5 +138,5 @@ function Admin() {
 }
 
 function Wrap({ children }: { children: React.ReactNode }) {
-  return <div dir="rtl" className="min-h-screen bg-background bg-hero"><SiteHeader /><main className="mx-auto max-w-6xl px-5 pb-10 pt-16">{children}</main></div>;
+  return <div dir="rtl" className="min-h-screen bg-background bg-hero"><SiteHeader /><main className="mx-auto max-w-6xl px-5 py-10">{children}</main></div>;
 }
