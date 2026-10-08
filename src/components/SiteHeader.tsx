@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Images } from "lucide-react";
 import logo from "@/assets/bikta-logo.png.asset.json";
+import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 
 export function SiteHeader() {
   return (
@@ -17,6 +18,7 @@ export function SiteHeader() {
           <Link to="/admin" className="hover:text-foreground">ניהול</Link>
         </nav>
       </div>
+      <div className="mx-auto flex max-w-6xl justify-end px-3 pb-1 sm:px-5"><AddToHomeScreen /></div>
     </header>
   );
 }

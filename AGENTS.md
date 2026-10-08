@@ -11,6 +11,8 @@
 
 # Project rules
 
+- Home-screen installation uses a static manifest and a shared install control with browser-specific fallback instructions, without service-worker caching — keeps booking availability fresh and preview updates reliable.
+
 - Booking writes go through server functions in src/lib/bookings.functions.ts using the admin client; tables have no public policies — keeps customer data private.
 - Customers manage bookings via an unguessable manage_token link, no login — fast checkout.
 - Google Calendar is accessed only from src/lib/gcal.server.ts via the connector gateway; opening the admin calendar pulls linked-event moves/deletions back into bookings — single integration point, calendar edits stay in sync.
