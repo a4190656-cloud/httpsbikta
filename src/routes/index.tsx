@@ -113,7 +113,7 @@ function BookingPage() {
   return (
     <Shell>
       {step === 0 && (
-      <section className="mx-auto max-w-6xl px-5 pb-6 pt-10 text-center">
+      <section className="mx-auto max-w-6xl px-5 pb-6 pt-20 text-center">
         <motion.div initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.1 } } }}>
           <motion.p variants={fade} className="text-sm font-medium tracking-wide text-accent">בקתה עם גינה פרטית · לכל מטרה</motion.p>
           <TypedHeadline text="המקום השקט שלכם, לפי שעה" />
@@ -143,7 +143,7 @@ function BookingPage() {
       </section>
       )}
 
-      <motion.section className={`mx-auto max-w-4xl px-5 pb-24 ${step === 0 ? "" : "pt-10"}`} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
+      <motion.section className={`mx-auto max-w-4xl px-5 pb-24 ${step === 0 ? "" : "pt-20"}`} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
         <Stepper step={step} />
         <div className="glass relative mt-6 overflow-hidden rounded-3xl p-6 sm:p-10">
           <AnimatePresence mode="wait" custom={dir}>
