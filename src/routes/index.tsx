@@ -111,7 +111,7 @@ function BookingPage() {
   }
 
   return (
-    <Shell>
+    <Shell showInstall={step === 0}>
       {step === 0 && (
       <section className="mx-auto max-w-6xl px-5 pb-6 pt-10 text-center">
         <motion.div initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.1 } } }}>
@@ -172,8 +172,8 @@ function BookingPage() {
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen bg-background bg-hero"><SiteHeader />{children}</div>;
+function Shell({ children, showInstall = false }: { children: React.ReactNode; showInstall?: boolean }) {
+  return <div className="min-h-screen bg-background bg-hero"><SiteHeader showInstall={showInstall} />{children}</div>;
 }
 
 function FloatingActions({ onDrinks }: { onDrinks: () => void }) {

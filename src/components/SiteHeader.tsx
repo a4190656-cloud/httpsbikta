@@ -3,7 +3,7 @@ import { Images } from "lucide-react";
 import logo from "@/assets/bikta-logo.png.asset.json";
 import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 
-export function SiteHeader() {
+export function SiteHeader({ showInstall = false }: { showInstall?: boolean }) {
   return (
     <header className="sticky top-0 z-40 glass !border-x-0 !border-t-0 !shadow-none">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-3 sm:h-20 sm:px-5">
@@ -18,11 +18,13 @@ export function SiteHeader() {
           <Link to="/admin" className="hover:text-foreground">ניהול</Link>
         </nav>
       </div>
-      <div className="absolute left-3 top-full sm:left-5">
-        <div className="rounded-b-[24px] glass !border-x-0 !border-t-0 !shadow-none px-3 pb-2 pt-0.5 shadow-[0_14px_30px_-20px] shadow-primary/40">
-          <AddToHomeScreen />
+      {showInstall && (
+        <div className="absolute left-3 top-full sm:left-5">
+          <div className="rounded-b-[24px] glass !border-x-0 !border-t-0 !shadow-none px-3 pb-2 pt-0.5 shadow-[0_14px_30px_-20px] shadow-primary/40">
+            <AddToHomeScreen />
+          </div>
         </div>
-      </div>
+      )}
     </header>
   );
 }
