@@ -3,7 +3,7 @@ import { Images } from "lucide-react";
 import logo from "@/assets/bikta-logo.png.asset.json";
 import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 
-export function SiteHeader() {
+export function SiteHeader({ showInstall = false }: { showInstall?: boolean }) {
   return (
     <header className="sticky top-0 z-40 glass !border-x-0 !border-t-0 !shadow-none">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-3 sm:h-20 sm:px-5">
