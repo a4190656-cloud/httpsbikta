@@ -5,7 +5,7 @@ import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 
 export function SiteHeader() {
   return (
-    <header className="pointer-events-none sticky top-0 z-40 pb-[52px] sm:pb-[56px]">
+    <header className="pointer-events-none sticky top-0 z-40 pb-[84px] sm:pb-[88px]">
       <div className="glass pointer-events-auto !border-x-0 !border-t-0 !shadow-none">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-3 sm:h-20 sm:px-5">
           <Link to="/" className="flex items-center gap-3">
