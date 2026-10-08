@@ -5,7 +5,7 @@ import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 glass !border-x-0 !border-t-0 !shadow-none">
+    <header className="sticky top-0 z-40 glass !border-x-0 !border-t-0 !shadow-none [border-radius:0_0_50%_50%/0_0_26px_26px] shadow-[0_14px_30px_-20px] shadow-primary/40">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-3 sm:h-20 sm:px-5">
         <Link to="/" className="flex items-center gap-3">
           <img src={logo.url} alt="בקתה B" className="h-12 w-auto sm:h-16" />
