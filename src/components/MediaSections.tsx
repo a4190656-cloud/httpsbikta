@@ -86,7 +86,7 @@ function isBlankImage(img: HTMLImageElement): boolean {
     const d = ctx.getImageData(0, 0, 12, 12).data;
     let min = 255, max = 0;
     for (let i = 0; i < d.length; i += 4) {
-      const v = (d[i] + d[i + 1] + d[i + 2]) / 3;
+      const v = ((d[i] ?? 0) + (d[i + 1] ?? 0) + (d[i + 2] ?? 0)) / 3;
       if (v < min) min = v; if (v > max) max = v;
     }
     return max - min < 6;
