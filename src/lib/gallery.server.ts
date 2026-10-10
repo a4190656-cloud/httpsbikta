@@ -20,7 +20,7 @@ export interface GalleryImage {
 
 // Short-lived in-process cache so the folder is not listed on every page view.
 let cache: { at: number; images: GalleryImage[] } | null = null;
-const CACHE_MS = 60_000;
+const CACHE_MS = 30_000;
 
 export async function listGalleryImages(force = false): Promise<GalleryImage[]> {
   if (!force && cache && Date.now() - cache.at < CACHE_MS) return cache.images;
@@ -45,8 +45,8 @@ export async function listGalleryImages(force = false): Promise<GalleryImage[]> 
       name: f.name,
       mimeType: f.mimeType,
     }));
-    if (images.length || !cache) cache = { at: Date.now(), images };
-    if (images.length) cache = { at: Date.now(), images };
+    // Always replace the cache so files deleted from Drive disappear from the site.
+    cache = { at: Date.now(), images };
     return images;
   } catch (err) {
     console.error("Drive gallery list error:", err);

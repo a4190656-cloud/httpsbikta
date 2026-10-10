@@ -28,7 +28,8 @@ export function ReviewsSection() {
     queryFn: () => fetchReviews(),
     staleTime: 10 * 60_000,
   });
-  const reviews = data?.reviews ?? [];
+  const [broken, setBroken] = useState<Set<string>>(new Set());
+  const reviews = (data?.reviews ?? []).filter((r) => !broken.has(r.id));
 
   return (
     <section id="reviews" className="scroll-mt-28 border-y border-border/70 bg-secondary/40 py-14 sm:py-20">
@@ -41,13 +42,13 @@ export function ReviewsSection() {
         {isLoading ? (
           <div className="mx-auto mt-8 aspect-[4/5] w-[78vw] max-w-sm animate-pulse rounded-2xl bg-muted" />
         ) : reviews.length ? (
-          <div className="-mx-5 mt-8 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-4 sm:mx-0 sm:gap-4 sm:px-0">
+          <div className="-mx-5 mt-8 flex items-start snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-4 sm:mx-0 sm:gap-4 sm:px-0">
             {reviews.map((review, index) => (
               <motion.figure key={review.id} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }}
-                className="w-[78vw] max-w-sm shrink-0 snap-center overflow-hidden rounded-2xl border border-border bg-card shadow-organic">
+                className="h-fit w-[78vw] max-w-sm shrink-0 snap-center self-start overflow-hidden rounded-2xl border border-border bg-card shadow-organic">
                 <Button variant="ghost" onClick={() => setActiveReview({ imageUrl: review.imageUrl, title: review.title })} aria-label="פתיחת צילום התגובה"
                   className="group relative block h-auto min-h-0 w-full overflow-hidden rounded-none p-0">
-                  <img src={review.imageUrl} alt={review.title || "צילום מסך של תגובת לקוח"} loading={index === 0 ? "eager" : "lazy"} className="block h-auto w-full object-contain" />
+                  <img src={review.imageUrl} alt={review.title || "צילום מסך של תגובת לקוח"} loading={index === 0 ? "eager" : "lazy"} onError={() => setBroken((prev) => new Set(prev).add(review.id))} className="block h-auto max-h-[85vh] w-full object-contain" />
                   <span className="absolute bottom-2 left-2 grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-organic transition-transform group-hover:scale-105" title="הגדלת התמונה"><Maximize2 className="h-4 w-4" /></span>
                 </Button>
                 {review.title && <figcaption className="border-t border-border px-4 py-3 text-sm font-medium">{review.title}</figcaption>}
@@ -80,20 +81,22 @@ interface GalleryEntry {
 
 export function PhotoGallery() {
   const [active, setActive] = useState<number | null>(null);
+  const [failed, setFailed] = useState<Set<string>>(new Set());
   const fetchImages = useServerFn(getGalleryImages);
   const { data } = useQuery({
     queryKey: ["drive-gallery"],
     queryFn: () => fetchImages(),
-    staleTime: 60_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const driveEntries: GalleryEntry[] = (data ?? []).map((img) => ({
     src: `/api/public/gallery/${img.id}`,
     key: img.id,
   }));
-  const entries: GalleryEntry[] = driveEntries.length
+  const entries: GalleryEntry[] = (driveEntries.length
     ? driveEntries
-    : fallbackGallery.map((asset, i) => ({ src: asset.url, key: `fallback-${i}` }));
+    : fallbackGallery.map((asset, i) => ({ src: asset.url, key: `fallback-${i}` }))).filter((e) => !failed.has(e.key));
 
   return (
     <section id="gallery" className="scroll-mt-28 py-14 sm:py-20">
@@ -110,8 +113,8 @@ export function PhotoGallery() {
             <motion.div key={entry.key} initial={{ opacity: 0, scale: 0.97 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: (index % 4) * 0.05 }}
               className={index === 0 || index === 5 ? "col-span-2 row-span-2" : ""}>
               <Button variant="ghost" onClick={() => setActive(index)} aria-label={`פתיחת תמונה ${index + 1}`}
-                className="group h-full min-h-36 w-full overflow-hidden rounded-xl border-0 p-0 sm:min-h-44">
-                <img src={entry.src} alt={`בקתה B והגינה הפרטית — תמונה ${index + 1}`} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                className="group h-full min-h-36 w-full overflow-hidden rounded-xl border-0 bg-muted p-0 sm:min-h-44">
+                <img src={entry.src} alt={`בקתה B והגינה הפרטית — תמונה ${index + 1}`} loading="lazy" onError={() => setFailed((prev) => new Set(prev).add(entry.key))} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
               </Button>
             </motion.div>
           ))}
