@@ -22,8 +22,10 @@ export const Route = createFileRoute("/api/public/reviews/$reviewId")({
           .download(review.storage_path);
         if (downloadError || !image) return new Response("Not found", { status: 404 });
 
-        return new Response(image.stream(), {
+        const bytes = await image.arrayBuffer();
+        return new Response(bytes, {
           headers: {
+            "Content-Length": String(bytes.byteLength),
             "Content-Type": image.type || "image/jpeg",
             "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
             "X-Content-Type-Options": "nosniff",

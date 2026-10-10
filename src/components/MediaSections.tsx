@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type ImgHTMLAttributes } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AnimatePresence, motion } from "framer-motion";
@@ -48,7 +48,7 @@ export function ReviewsSection() {
                 className="h-fit w-[78vw] max-w-sm shrink-0 snap-center self-start overflow-hidden rounded-2xl border border-border bg-muted shadow-organic">
                 <Button variant="ghost" onClick={() => setActiveReview({ imageUrl: review.imageUrl, title: review.title })} aria-label="פתיחת צילום התגובה"
                   className="group relative block h-auto min-h-0 w-full overflow-hidden rounded-none p-0">
-                  <img src={review.imageUrl} alt={review.title || "צילום מסך של תגובת לקוח"} loading="eager" decoding="async" onError={() => setBroken((prev) => new Set(prev).add(review.id))} className="block h-auto max-h-[85vh] w-full object-contain" />
+                  <SafeImage src={review.imageUrl} alt={review.title || "צילום מסך של תגובת לקוח"} loading="eager" onFail={() => setBroken((prev) => new Set(prev).add(review.id))} className="block h-auto min-h-24 max-h-[85vh] w-full object-contain" />
                   <span className="absolute bottom-2 left-2 grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-organic transition-transform group-hover:scale-105" title="הגדלת התמונה"><Maximize2 className="h-4 w-4" /></span>
                 </Button>
                 {review.title && <figcaption className="border-t border-border px-4 py-3 text-sm font-medium">{review.title}</figcaption>}
@@ -71,6 +71,28 @@ export function ReviewsSection() {
         )}
       </AnimatePresence>
     </section>
+  );
+}
+
+/** Image that retries once, then reports failure if it errors, stalls or decodes empty. */
+function SafeImage({ src, onFail, className, ...rest }: ImgHTMLAttributes<HTMLImageElement> & { src: string; onFail: () => void }) {
+  const [attempt, setAttempt] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const ref = useRef<HTMLImageElement>(null);
+  const url = attempt ? `${src}${src.includes("?") ? "&" : "?"}r=${attempt}` : src;
+  const fail = () => { if (attempt < 1) { setAttempt((a) => a + 1); setLoaded(false); } else onFail(); };
+  useEffect(() => {
+    const img = ref.current;
+    if (img?.complete && img.naturalWidth > 0) setLoaded(true);
+    const t = window.setTimeout(() => { const el = ref.current; if (!(el?.complete && el.naturalWidth > 0)) fail(); }, 15000);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url]);
+  return (
+    <img ref={ref} src={url} {...rest}
+      onLoad={(e) => { if (e.currentTarget.naturalWidth > 0) setLoaded(true); else fail(); }}
+      onError={fail}
+      className={`${className ?? ""} ${loaded ? "" : "animate-pulse bg-muted"}`} />
   );
 }
 
@@ -114,7 +136,7 @@ export function PhotoGallery() {
               className={index === 0 || index === 5 ? "col-span-2 row-span-2" : ""}>
               <Button variant="ghost" onClick={() => setActive(index)} aria-label={`פתיחת תמונה ${index + 1}`}
                 className="group h-full min-h-36 w-full overflow-hidden rounded-xl border-0 bg-muted p-0 sm:min-h-44">
-                <img src={entry.src} alt={`בקתה B והגינה הפרטית — תמונה ${index + 1}`} loading="lazy" onError={() => setFailed((prev) => new Set(prev).add(entry.key))} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <SafeImage src={entry.src} alt={`בקתה B והגינה הפרטית — תמונה ${index + 1}`} loading="eager" onFail={() => setFailed((prev) => new Set(prev).add(entry.key))} className="h-full w-full object-cover" />
               </Button>
             </div>
           ))}
