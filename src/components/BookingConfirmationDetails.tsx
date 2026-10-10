@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, Copy, CupSoda, Link2, Mail, MessageCircle } from "lucide-react";
+import { Check, Copy, CupSoda, Link2, Mail } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +58,7 @@ export function ConfirmationContactActions({ waUrl, method, settlement, drinksOn
     <div className="mt-5 space-y-3 text-right">
       {needsProof && <p className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm leading-relaxed text-primary">נא לשלוח לנו אסמכתת תשלום לאישור סופי. ניתן לצרף אותה להודעת וואטסאפ או למייל.</p>}
       <Button asChild size="lg" className="h-auto min-h-16 w-full whitespace-normal rounded-lg py-3">
-        <a href={waUrl} target="_blank" rel="noopener noreferrer"><MessageCircle /><span className="min-w-0 text-center"><span className="block font-semibold">שליחת פרטי {drinksOnly ? "השתייה" : "ההזמנה"} בוואטסאפ</span><span className="mt-1 block text-sm" dir="ltr">053-9000374</span></span></a>
+        <a href={waUrl} target="_blank" rel="noopener noreferrer"><WhatsAppIcon /><span className="min-w-0 text-center"><span className="block font-semibold">שליחת פרטי {drinksOnly ? "השתייה" : "ההזמנה"} בוואטסאפ</span><span className="mt-1 block text-sm" dir="ltr">053-9000374</span></span></a>
       </Button>
       <Button asChild variant="outline" size="lg" className="h-auto min-h-16 w-full whitespace-normal rounded-lg py-3">
         <a href={emailUrl}><Mail /><span className="min-w-0 text-center"><span className="block font-semibold">שליחת פרטים באימייל</span><span className="mt-1 block break-all text-sm" dir="ltr">{CONTACT_EMAIL}</span></span></a>

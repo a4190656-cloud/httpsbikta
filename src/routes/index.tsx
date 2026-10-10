@@ -7,11 +7,12 @@ import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import {
   Trees, Home, ArrowLeft, ArrowRight, UsersRound,
-  Check, ShieldCheck, Clock, Loader2, CalendarDays, X, Minus, Plus, CupSoda, MessageCircle, MessageSquareQuote,
+  Check, ShieldCheck, Clock, Loader2, CalendarDays, X, Minus, Plus, CupSoda, MessageSquareQuote,
   AlertTriangle,
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ConfirmationContactActions, DrinksReminder, LostBookingLinkNotice, PersonalBookingLink } from "@/components/BookingConfirmationDetails";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { PhotoGallery, ReviewsSection } from "@/components/MediaSections";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -186,7 +187,7 @@ function FloatingActions({ onDrinks }: { onDrinks: () => void }) {
       <motion.div className="fixed bottom-5 right-3 z-30 sm:bottom-7 sm:right-6" {...breathe(0)}>
         <Button asChild className="h-11 w-11 rounded-full p-0 shadow-organic">
           <a href="https://wa.me/972539000374" target="_blank" rel="noopener noreferrer" aria-label="יצירת קשר בוואטסאפ">
-            <MessageCircle className="h-5 w-5" />
+            <WhatsAppIcon className="h-5 w-5" />
           </a>
         </Button>
       </motion.div>
