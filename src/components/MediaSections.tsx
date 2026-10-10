@@ -74,25 +74,61 @@ export function ReviewsSection() {
   );
 }
 
-/** Image that retries once, then reports failure if it errors, stalls or decodes empty. */
+/** True when the decoded image is one flat colour — e.g. a blank placeholder
+ * substituted by a network/content filter instead of the real photo. */
+function isBlankImage(img: HTMLImageElement): boolean {
+  try {
+    const c = document.createElement("canvas");
+    c.width = 12; c.height = 12;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return false;
+    ctx.drawImage(img, 0, 0, 12, 12);
+    const d = ctx.getImageData(0, 0, 12, 12).data;
+    let min = 255, max = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const v = ((d[i] ?? 0) + (d[i + 1] ?? 0) + (d[i + 2] ?? 0)) / 3;
+      if (v < min) min = v; if (v > max) max = v;
+    }
+    return max - min < 6;
+  } catch {
+    return false; // cross-origin image — can't inspect, assume fine
+  }
+}
+
+const MAX_ATTEMPTS = 5;
+
+/** Image that retries (with growing delays) when it errors, stalls, decodes empty
+ * or arrives as a blank placeholder; reports failure after the last attempt. */
 function SafeImage({ src, onFail, className, ...rest }: ImgHTMLAttributes<HTMLImageElement> & { src: string; onFail: () => void }) {
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const ref = useRef<HTMLImageElement>(null);
-  const url = attempt ? `${src}${src.includes("?") ? "&" : "?"}r=${attempt}` : src;
-  const fail = () => { if (attempt < 1) { setAttempt((a) => a + 1); setLoaded(false); } else onFail(); };
+  const retryTimer = useRef<number | undefined>(undefined);
+  const url = attempt ? `${src}${src.includes("?") ? "&" : "?"}r=${attempt}-${Date.now() % 100000}` : src;
+  const fail = () => {
+    setLoaded(false);
+    if (attempt < MAX_ATTEMPTS) {
+      window.clearTimeout(retryTimer.current);
+      retryTimer.current = window.setTimeout(() => setAttempt((a) => a + 1), 1500 * (attempt + 1));
+    } else onFail();
+  };
+  const check = (el: HTMLImageElement) => {
+    if (el.naturalWidth === 0 || isBlankImage(el)) fail();
+    else setLoaded(true);
+  };
   useEffect(() => {
     const img = ref.current;
-    if (img?.complete && img.naturalWidth > 0) setLoaded(true);
+    if (img?.complete && img.naturalWidth > 0) check(img);
     const t = window.setTimeout(() => { const el = ref.current; if (!(el?.complete && el.naturalWidth > 0)) fail(); }, 15000);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
+  useEffect(() => () => window.clearTimeout(retryTimer.current), []);
   return (
     <img ref={ref} src={url} {...rest}
-      onLoad={(e) => { if (e.currentTarget.naturalWidth > 0) setLoaded(true); else fail(); }}
+      onLoad={(e) => check(e.currentTarget)}
       onError={fail}
-      className={`${className ?? ""} ${loaded ? "" : "animate-pulse bg-muted"}`} />
+      className={`${className ?? ""} ${loaded ? "" : "opacity-0"}`} />
   );
 }
 
