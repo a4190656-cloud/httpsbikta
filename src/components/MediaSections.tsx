@@ -44,15 +44,15 @@ export function ReviewsSection() {
         ) : reviews.length ? (
           <div className="-mx-5 mt-8 flex items-start snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-4 sm:mx-0 sm:gap-4 sm:px-0">
             {reviews.map((review, index) => (
-              <motion.figure key={review.id} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }}
-                className="h-fit w-[78vw] max-w-sm shrink-0 snap-center self-start overflow-hidden rounded-2xl border border-border bg-card shadow-organic">
+              <figure key={review.id}
+                className="h-fit w-[78vw] max-w-sm shrink-0 snap-center self-start overflow-hidden rounded-2xl border border-border bg-muted shadow-organic">
                 <Button variant="ghost" onClick={() => setActiveReview({ imageUrl: review.imageUrl, title: review.title })} aria-label="פתיחת צילום התגובה"
                   className="group relative block h-auto min-h-0 w-full overflow-hidden rounded-none p-0">
-                  <img src={review.imageUrl} alt={review.title || "צילום מסך של תגובת לקוח"} loading={index === 0 ? "eager" : "lazy"} onError={() => setBroken((prev) => new Set(prev).add(review.id))} className="block h-auto max-h-[85vh] w-full object-contain" />
+                  <img src={review.imageUrl} alt={review.title || "צילום מסך של תגובת לקוח"} loading="eager" decoding="async" onError={() => setBroken((prev) => new Set(prev).add(review.id))} className="block h-auto max-h-[85vh] w-full object-contain" />
                   <span className="absolute bottom-2 left-2 grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-organic transition-transform group-hover:scale-105" title="הגדלת התמונה"><Maximize2 className="h-4 w-4" /></span>
                 </Button>
                 {review.title && <figcaption className="border-t border-border px-4 py-3 text-sm font-medium">{review.title}</figcaption>}
-              </motion.figure>
+              </figure>
             ))}
           </div>
         ) : (
@@ -110,13 +110,13 @@ export function PhotoGallery() {
         </motion.div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
           {entries.map((entry, index) => (
-            <motion.div key={entry.key} initial={{ opacity: 0, scale: 0.97 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: (index % 4) * 0.05 }}
+            <div key={entry.key}
               className={index === 0 || index === 5 ? "col-span-2 row-span-2" : ""}>
               <Button variant="ghost" onClick={() => setActive(index)} aria-label={`פתיחת תמונה ${index + 1}`}
                 className="group h-full min-h-36 w-full overflow-hidden rounded-xl border-0 bg-muted p-0 sm:min-h-44">
                 <img src={entry.src} alt={`בקתה B והגינה הפרטית — תמונה ${index + 1}`} loading="lazy" onError={() => setFailed((prev) => new Set(prev).add(entry.key))} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
               </Button>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
