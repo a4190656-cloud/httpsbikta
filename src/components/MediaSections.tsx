@@ -128,7 +128,7 @@ function SafeImage({ src, onFail, className, ...rest }: ImgHTMLAttributes<HTMLIm
     <img ref={ref} src={url} {...rest}
       onLoad={(e) => check(e.currentTarget)}
       onError={fail}
-      className={`${className ?? ""} ${loaded ? "" : "animate-pulse bg-muted"}`} />
+      className={`${className ?? ""} ${loaded ? "" : "opacity-0"}`} />
   );
 }
 
