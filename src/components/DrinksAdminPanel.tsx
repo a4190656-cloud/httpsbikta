@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Banknote, Loader2, MessageCircle, Minus, Plus } from "lucide-react";
+import { Banknote, Loader2, Minus, Plus } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,7 @@ export function DrinksLedgerActions({ row }: { row: DrinksRow }) {
   const message = `היי ${row.full_name}, ראינו שדיווחת על לקיחת שתייה בסך ${formatILS(drinkAmount(row))}, נשמח להסדרת התשלום. תודה, בקתה B`;
   return <div className="mt-2 flex flex-wrap items-center gap-1">
     <Button size="icon" variant="outline" disabled={saving} onClick={reconcile} aria-label="שולם במזומן / הותאם" title="שולם במזומן / הותאם מול הקופה"><Banknote className="h-4 w-4" /></Button>
-    {/^972\d{8,9}$/.test(phone) && <Button asChild size="icon" variant="outline"><a href={`https://wa.me/${phone}?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer" aria-label={`תזכורת חוב בוואטסאפ ל${row.full_name}`} title="תזכורת חוב בוואטסאפ"><MessageCircle className="h-4 w-4" /></a></Button>}
+    {/^972\d{8,9}$/.test(phone) && <Button asChild size="icon" variant="outline"><a href={`https://wa.me/${phone}?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer" aria-label={`תזכורת חוב בוואטסאפ ל${row.full_name}`} title="תזכורת חוב בוואטסאפ"><WhatsAppIcon className="h-4 w-4" /></a></Button>}
   </div>;
 }
 
