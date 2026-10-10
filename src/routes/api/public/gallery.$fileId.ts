@@ -13,10 +13,13 @@ export const Route = createFileRoute("/api/public/gallery/$fileId")({
         const upstream = await fetchGalleryFile(params.fileId);
         if (!upstream) return new Response("Not found", { status: 404 });
 
-        return new Response(upstream.body, {
+        const bytes = await upstream.arrayBuffer();
+        if (!bytes.byteLength) return new Response("Not found", { status: 404 });
+        return new Response(bytes, {
           status: 200,
           headers: {
             "Content-Type": upstream.headers.get("Content-Type") ?? "image/jpeg",
+            "Content-Length": String(bytes.byteLength),
             "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
           },
         });
