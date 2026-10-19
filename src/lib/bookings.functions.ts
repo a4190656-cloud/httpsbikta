@@ -467,8 +467,6 @@ const jlmMonth = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: "
 
 
 // ---------- Sheet -> site import ----------
-const truthy = (v: string) => /^(true|כן|v|✓|✔|1|yes)$/i.test(v.trim());
-const parseNum = (v: string) => { const n = Number(String(v).replace(/[^\d.-]/g, "")); return Number.isFinite(n) ? n : 0; };
 function statusFromSheet(label: string, paid: boolean, receipt: boolean) {
   const hit = Object.entries(STATUS_LABEL).find(([, v]) => v === label.trim());
   if (hit) return hit[0];
@@ -476,59 +474,58 @@ function statusFromSheet(label: string, paid: boolean, receipt: boolean) {
   return paid ? "paid" : "pending";
 }
 
-/** Pulls the month's sheet tab into the database: edited rows update bookings, new rows are added, cleared rows cancel. */
+/** Deterministic, unguessable manage_token for a sheet row's content. manage_token is UNIQUE in the
+ *  database, so if two imports run at the same moment the second insert of the same row fails
+ *  instead of creating a duplicate booking. */
+async function sheetToken(key: string) {
+  const secret = process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? process.env["LOVABLE_API_KEY"] ?? "bikta-sheet";
+  const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(`sheet:${key}`)));
+  return Array.from(sig.slice(0, 16), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Pulls the month's sheet tab into the database: edited rows update bookings, new rows are added, cleared rows cancel.
+ *  Rows are matched by content (day + name) before row number (see sheet-import.ts), a row that already has a
+ *  booking is never inserted again, and this year's tabs are never imported into another year. */
 async function importSheetMonth(month: string) {
   try {
     const [y, m] = month.split("-").map(Number) as [number, number];
     const tab = String(m).padStart(2, "0");
+    const { planSheetImport, SHEET_YEAR } = await import("./sheet-import");
+    if (y !== SHEET_YEAR) return; // tabs "01".."12" carry no year
     const { readMonthRows } = await import("./sheets.server");
     const rows = await readMonthRows(tab);
     if (!rows) return;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: linked } = await supabaseAdmin.from("bookings")
-      .select("id, full_name, phone, total, payment_method, status, receipt_issued, paid_at, sheet_row, kind")
-      .eq("sheet_tab", tab).gte("starts_at", new Date(Date.UTC(y, m - 2, 20)).toISOString()).lt("starts_at", new Date(Date.UTC(y, m, 10)).toISOString());
-    const byRow = new Map((linked ?? []).map((b) => [b.sheet_row, b]));
-    for (const { row, cells } of rows) {
-      const [, date = "", nameCell = "", hoursCell = "", drinksCell = "", paidDateCell = "", method = "", amountCell = "", paidCell = "", receiptCell = "", statusCell = ""] = cells;
-      const b = byRow.get(row);
-      if (!nameCell) {
-        if (b && !FREE_STATUSES.includes(b.status)) await supabaseAdmin.from("bookings").update({ status: "cancelled" }).eq("id", b.id);
-        continue;
-      }
-      const phoneMatch = nameCell.match(/(\+?\d[\d-]{7,})\s*$/);
-      const phone = phoneMatch ? phoneMatch[1]! : "";
-      const fullName = (phoneMatch ? nameCell.slice(0, phoneMatch.index) : nameCell).trim() || nameCell;
-      const paid = truthy(paidCell), receipt = truthy(receiptCell);
-      const status = statusFromSheet(statusCell, paid, receipt);
-      const total = parseNum(amountCell);
-      const [pd, pm] = paidDateCell.split("/").map(Number);
-      const paidAt = paid && pd && pm ? new Date(Date.UTC(y, pm - 1, pd, 9)).toISOString() : null;
-      if (b) {
-        const patch: any = {};
-        if (fullName !== b.full_name) patch.full_name = fullName;
-        if (phone && phone !== b.phone) patch.phone = phone;
-        if (total !== Number(b.total)) { patch.total = total; patch.subtotal = total; patch.vat = 0; }
-        if (method && method !== b.payment_method) patch.payment_method = method;
-        if (status !== b.status) patch.status = status;
-        if (receipt !== !!b.receipt_issued) patch.receipt_issued = receipt;
-        if (paid && !b.paid_at && paidAt) patch.paid_at = paidAt;
-        if (!paid && b.paid_at) patch.paid_at = null;
-        if (Object.keys(patch).length) await supabaseAdmin.from("bookings").update(patch as never).eq("id", b.id);
-        continue;
-      }
-      const [d, mo] = date.split("/").map(Number);
-      const start = new Date(Date.UTC(y, (mo || m) - 1, d || 1, 9));
-      const hours = parseNum(hoursCell);
-      await supabaseAdmin.from("bookings").insert({
-        kind: "sheet", source: "sheet", purpose: "other", full_name: fullName, phone, email: "",
-        starts_at: start.toISOString(), ends_at: new Date(start.getTime() + hours * 3600_000).toISOString(),
-        hours: Math.ceil(hours), duration_hours: hours, subtotal: total, vat: 0, total,
-        notes: drinksCell ? `שתייה: ${drinksCell}` : "נוסף מהגיליון",
-        payment_method: method || "אחר", status, receipt_issued: receipt, paid_at: paidAt,
-        manage_token: crypto.randomUUID().replace(/-/g, ""), sheet_tab: tab, sheet_row: row,
-      } as never);
+    const { data: candidates, error: readErr } = await supabaseAdmin.from("bookings")
+      .select("id, kind, status, full_name, phone, total, payment_method, receipt_issued, paid_at, starts_at, ends_at, sheet_tab, sheet_row")
+      .or(`sheet_tab.eq.${tab},sheet_tab.is.null`)
+      .gte("starts_at", new Date(Date.UTC(y, m - 2, 20)).toISOString()).lt("starts_at", new Date(Date.UTC(y, m, 10)).toISOString());
+    if (readErr) { console.error("sheet import read", readErr); return; }
+    const plan = planSheetImport(rows, (candidates ?? []) as never, { tab, year: y, statusFromSheet });
+    for (const u of plan.updates) {
+      const patch = u.rekey ? { ...u.patch, manage_token: await sheetToken(u.rekey) } : u.patch;
+      const { error } = await supabaseAdmin.from("bookings").update(patch as never).eq("id", u.id);
+      if (error && u.rekey) await supabaseAdmin.from("bookings").update(u.patch as never).eq("id", u.id); // token taken: keep the old one
     }
+    for (const id of plan.cancels) await supabaseAdmin.from("bookings").update({ status: "cancelled" }).eq("id", id);
+    for (const id of plan.twins) await supabaseAdmin.from("bookings").delete().eq("id", id).eq("kind", "sheet");
+    for (const ins of plan.inserts) {
+      const p = ins.parsed;
+      const status = statusFromSheet(p.statusCell, p.paid, p.receipt);
+      const paidAt = p.paid && p.paidDay ? new Date(Date.UTC(y, p.paidDay.m - 1, p.paidDay.d, 9)).toISOString() : null;
+      const { error } = await supabaseAdmin.from("bookings").insert({
+        kind: "sheet", source: "sheet", purpose: "other", full_name: p.fullName, phone: p.phone, email: "",
+        starts_at: ins.startsAt, ends_at: ins.endsAt,
+        hours: Math.ceil(p.hours), duration_hours: p.hours, subtotal: p.total, vat: 0, total: p.total,
+        notes: p.drinks ? `שתייה: ${p.drinks}` : "נוסף מהגיליון",
+        payment_method: p.method || "אחר", status, receipt_issued: p.receipt, paid_at: paidAt,
+        manage_token: await sheetToken(ins.key), sheet_tab: tab, sheet_row: ins.row,
+      } as never);
+      // 23505 = unique manage_token: another import inserted this exact row a moment ago. Skip.
+      if (error && (error as { code?: string }).code !== "23505") console.error("sheet import insert", error);
+    }
+    for (const sk of plan.skipped) console.error(`sheet import: tab ${tab} row ${sk.row} skipped (${sk.reason})`);
   } catch (e) { console.error("sheet import", e); }
 }
 
